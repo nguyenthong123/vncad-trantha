@@ -53,11 +53,11 @@ function renderPropertiesPanel(autoToggle = true) {
 
   // Auto-show when selecting objects in SELECT mode, auto-hide when deselected
   if (autoToggle) {
-    if (selCount > 0 && !suppressPanel) {
+    if (selCount > 0 && !suppressPanel && (currentTool === 'SELECT' || !currentTool)) {
       panel.classList.remove('hidden');
       const btn = document.getElementById('btn-PROPERTIES');
       if (btn) btn.classList.add('active');
-    } else if (selCount === 0 || suppressPanel) {
+    } else if (selCount === 0 || suppressPanel || (currentTool !== 'SELECT' && currentTool)) {
       panel.classList.add('hidden');
       const btn = document.getElementById('btn-PROPERTIES');
       if (btn) btn.classList.remove('active');

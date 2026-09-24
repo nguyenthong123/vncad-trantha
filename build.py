@@ -35,6 +35,8 @@ def read_plugin_file(rel_path):
     return ""
 
 def build_plugins():
+    if not os.path.exists(PLUGINS_SRC_DIR):
+        return ""
     print("🧩 Building Plugins from modular plugins_src/...")
     os.makedirs(PLUGINS_DIR, exist_ok=True)
     
@@ -290,7 +292,7 @@ if __name__ == "__main__":
                 },
                 "source": [
                     "# 📐 VINACAD PROFESSIONAL WEB STUDIO TRÊN GOOGLE COLAB\n",
-                    "### Động Cơ CAD 2D Đồ Họa 60FPS • Bảng Thuộc Tính (PR) • Nạp Tool (APPLOAD) • Chia Trần Thả 600 (TT600)\n",
+                    "### Động Cơ CAD 2D Đồ Họa 60FPS • Bảng Thuộc Tính (PR) • AutoCAD CLI • Bắt Điểm OSNAP • Nạp Tool (APPLOAD)\n",
                     "\n",
                     "---\n",
                     "\n",

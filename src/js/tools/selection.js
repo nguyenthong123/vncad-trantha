@@ -8,6 +8,11 @@ function selectTool(tool) {
   polyPoints = [];
   if (dynBox) dynBox.style.display = 'none';
 
+  if (tool && tool !== 'SELECT' && tool !== 'PAN') {
+    if (typeof lastExecutedCommand !== 'undefined') lastExecutedCommand = tool;
+    window.lastExecutedCommand = tool;
+  }
+
   // Trigger onDeactivate on previous custom tool handler
   if (prevTool && prevTool !== tool && window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[prevTool]) {
     let prevHandler = window.cadPluginHooks.toolHandlers[prevTool];

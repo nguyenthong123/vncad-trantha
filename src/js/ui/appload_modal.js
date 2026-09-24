@@ -188,6 +188,8 @@ function executeLispScript(code, toolId) {
  */
 function executeToolCode(tool) {
   if (!tool || !tool.code || tool.enabled === false) return;
+  if (tool._isExecuted) return;
+  tool._isExecuted = true;
   let isLsp = tool.type === 'AutoLISP' || (tool.fileName && tool.fileName.endsWith('.lsp')) || tool.code.includes('(defun');
 
   if (isLsp) {

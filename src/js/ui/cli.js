@@ -44,8 +44,8 @@ const KNOWN_COMMANDS = [
   { cmd: 'TOP', aliases: ['VTOP', 'VIEWTOP', 'PLAN'], desc: 'Đưa góc nhìn về Top (0°)' },
   { cmd: 'ROTATEVIEW', aliases: ['RV', 'VIEWROTATE'], desc: 'Xoay góc nhìn 2D theo độ' },
   { cmd: 'HELP', aliases: ['?'], desc: 'Hiển thị danh sách lệnh' },
-  { cmd: '3D', aliases: ['TT3D', 'VIEW3D', 'ISO'], desc: 'Mở cửa sổ xem 3D Phối Cảnh' },
-  { cmd: 'SECTION', aliases: ['TTSEC', 'SEC', 'MATCAT'], desc: 'Mở Bản vẽ Mặt Cắt Kỹ Thuật 2D' },
+  { cmd: '3D', aliases: ['VIEW3D', 'ISO'], desc: 'Mở cửa sổ xem 3D Phối Cảnh' },
+  { cmd: 'SECTION', aliases: ['SEC', 'MATCAT'], desc: 'Mở Bản vẽ Mặt Cắt Kỹ Thuật 2D' },
   { cmd: 'NEW', aliases: ['QNEW', 'BANVE', 'TAOMOI'], desc: 'Tạo bản vẽ mới sạch sẽ (Ctrl+N)' },
   { cmd: 'UNDO', aliases: ['U'], desc: 'Hoàn tác thao tác trước (Ctrl+Z)' },
   { cmd: 'REDO', aliases: ['REDO', 'LAMLAI'], desc: 'Làm lại thao tác vừa hoàn tác (Ctrl+Y)' },
@@ -178,9 +178,11 @@ function findBestCommandSuggestion(inputCmd) {
   return null;
 }
 
+window.lastExecutedCommand = null;
+
 if (cliInput) {
   cliInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || (e.key === ' ' && cliInput.value.trim().length > 0)) {
       e.preventDefault();
       e.stopPropagation();
       let raw = cliInput.value.trim();
@@ -197,9 +199,10 @@ if (cliInput) {
         }
 
         // 2. Nhấn Enter khi không gõ gì -> Lặp lại lệnh CAD trước đó
-        if (lastExecutedCommand && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastExecutedCommand.toUpperCase())) {
-          logToCliHistory(`Lặp lại lệnh trước: ${lastExecutedCommand}`, 'prompt');
-          runCommand(lastExecutedCommand);
+        let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
+        if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+          logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
+          runCommand(lastCmd);
         }
         return;
       }
@@ -207,10 +210,16 @@ if (cliInput) {
       commandHistory.push(raw);
       if (commandHistory.length > 50) commandHistory.shift();
       historyIndex = -1;
-      lastExecutedCommand = raw;
 
       logToCliHistory(`Command: ${raw}`, 'cmd');
       runCommand(raw);
+    } else if (e.key === ' ' && !cliInput.value.trim()) {
+      e.preventDefault();
+      let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
+      if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+        logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
+        runCommand(lastCmd);
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (commandHistory.length > 0) {
@@ -240,14 +249,103 @@ function recordCommandUsage(cmd) {
 }
 
 function runCommand(rawCmd) {
+  if (!rawCmd || !rawCmd.trim()) return;
   let parts = rawCmd.trim().split(/\s+/);
   let cmd = parts[0].toUpperCase();
   let args = parts.slice(1);
+
+  // Lưu lại lệnh vừa gọi vào lịch sử lệnh gần nhất
+  if (!['U', 'UNDO', 'REDO', 'HELP', '?', 'HISTORY', 'LOG', 'LOGS', 'JOURNAL'].includes(cmd)) {
+    lastExecutedCommand = rawCmd.trim();
+    window.lastExecutedCommand = lastExecutedCommand;
+  }
 
   if (typeof logCommandTransaction === 'function') {
     logCommandTransaction(cmd, 'STARTED', { args });
   }
 
+  // 1. ƯU TIÊN SỐ 1: Kiểm tra Plugin / Lệnh Động / Custom Tools đã nạp qua APPLOAD
+  if (typeof dynamicCommands !== 'undefined' && dynamicCommands[cmd]) {
+    recordCommandUsage(cmd);
+    try {
+      dynamicCommands[cmd].handler(...args);
+      return;
+    } catch (err) {
+      setInfo(`⚠️ Lỗi khi chạy lệnh '${cmd}': ${err.message}`, 'prompt');
+      console.error(err);
+      return;
+    }
+  }
+
+  if (typeof window['c_' + cmd] === 'function') {
+    recordCommandUsage(cmd);
+    try {
+      window['c_' + cmd](...args);
+      return;
+    } catch (err) {
+      setInfo(`⚠️ Lỗi khi chạy lệnh AutoLISP c:${cmd}: ${err.message}`, 'prompt');
+      console.error(err);
+      return;
+    }
+  }
+
+  if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[cmd]) {
+    recordCommandUsage(cmd);
+    selectTool(cmd);
+    return;
+  }
+
+  if (typeof window['init' + cmd + 'Tool'] === 'function') {
+    recordCommandUsage(cmd);
+    selectTool(cmd);
+    return;
+  }
+
+  let allAvailableTools = typeof getAllTools === 'function' ? getAllTools() : (typeof customTools !== 'undefined' ? customTools : []);
+  if (Array.isArray(allAvailableTools)) {
+    let foundTool = allAvailableTools.find(t => {
+      if (t.enabled === false) return false;
+      let cmds = t.commands || [t.cmd];
+      return cmds.some(c => c && c.toUpperCase() === cmd);
+    });
+
+    if (foundTool) {
+      recordCommandUsage(cmd);
+      if (!foundTool._isExecuted && typeof executeToolCode === 'function') {
+        executeToolCode(foundTool);
+      }
+      if (typeof dynamicCommands !== 'undefined' && dynamicCommands[cmd]) {
+        dynamicCommands[cmd].handler(...args);
+        return;
+      }
+      if (typeof window['c_' + cmd] === 'function') {
+        window['c_' + cmd](...args);
+        return;
+      }
+      if (typeof window['init' + cmd + 'Tool'] === 'function') {
+        selectTool(cmd);
+        return;
+      }
+      if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[cmd]) {
+        selectTool(cmd);
+        return;
+      }
+      setInfo(`⚡ Đã kích hoạt lệnh [${cmd}] từ Tool [${foundTool.name}].`, 'success');
+      return;
+    }
+  }
+
+  if (typeof window[cmd] === 'function' && !['focus', 'blur', 'close', 'open', 'print', 'stop'].includes(cmd.toLowerCase())) {
+    recordCommandUsage(cmd);
+    try {
+      window[cmd](...args);
+      return;
+    } catch (err) {
+      console.warn(err);
+    }
+  }
+
+  // 2. LỆNH LÕI AUTOCAD (Core Built-in Commands)
   // History & Command Journal Query
   if (['HISTORY', 'LOG', 'LOGS', 'JOURNAL'].includes(cmd)) {
     if (typeof printCommandHistory === 'function') printCommandHistory();
@@ -408,73 +506,6 @@ function runCommand(rawCmd) {
     recordCommandUsage('HELP');
     setInfo(`📖 Lệnh chính: L/PL/REC/C/A/EL/POL/H/DIM/DT | M/CO/O/RO/SC/MI/X/E | Z/P | TOP/RV 15 | 3D/SECTION | OPEN/SAVE/DXF | PR/LA/COL | APPLOAD`, 'info');
     return;
-  }
-
-  // 1. Dynamic Commands Registry (Đăng ký từ các Plugin ngoài)
-  if (typeof dynamicCommands !== 'undefined' && dynamicCommands[cmd]) {
-    recordCommandUsage(cmd);
-    try {
-      dynamicCommands[cmd].handler(...args);
-      return;
-    } catch (err) {
-      setInfo(`⚠️ Lỗi khi chạy lệnh '${cmd}': ${err.message}`, 'prompt');
-      console.error(err);
-      return;
-    }
-  }
-
-  // 2. Hàm AutoLISP window['c_' + cmd]
-  if (typeof window['c_' + cmd] === 'function') {
-    recordCommandUsage(cmd);
-    try {
-      window['c_' + cmd](...args);
-      return;
-    } catch (err) {
-      setInfo(`⚠️ Lỗi khi chạy lệnh AutoLISP c:${cmd}: ${err.message}`, 'prompt');
-      console.error(err);
-      return;
-    }
-  }
-
-  // 3. Công cụ dạng window['init' + cmd + 'Tool']
-  if (typeof window['init' + cmd + 'Tool'] === 'function') {
-    recordCommandUsage(cmd);
-    selectTool(cmd);
-    return;
-  }
-
-  // 4. Hàm global window[cmd]
-  if (typeof window[cmd] === 'function') {
-    recordCommandUsage(cmd);
-    window[cmd](...args);
-    return;
-  }
-
-  // 5. Tìm kiếm trong danh sách tất cả các Tool đã nạp (Default & Custom APPLOAD)
-  let allAvailableTools = typeof getAllTools === 'function' ? getAllTools() : (typeof customTools !== 'undefined' ? customTools : []);
-  if (Array.isArray(allAvailableTools)) {
-    let foundTool = allAvailableTools.find(t => {
-      if (t.enabled === false) return false;
-      let cmds = t.commands || [t.cmd];
-      return cmds.some(c => c && c.toUpperCase() === cmd);
-    });
-
-    if (foundTool) {
-      recordCommandUsage(cmd);
-      if (typeof executeToolCode === 'function') {
-        executeToolCode(foundTool);
-      }
-      if (typeof window['c_' + cmd] === 'function') {
-        window['c_' + cmd](...args);
-        return;
-      }
-      if (typeof window['init' + cmd + 'Tool'] === 'function') {
-        selectTool(cmd);
-        return;
-      }
-      setInfo(`⚡ Đã kích hoạt lệnh [${cmd}] từ Tool [${foundTool.name}].`, 'success');
-      return;
-    }
   }
 
   // Bắt lỗi thông minh & Gợi ý sửa sai chính tả (IntelliSense Auto-Diagnosis)

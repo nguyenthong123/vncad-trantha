@@ -113,50 +113,74 @@ window.addEventListener('keydown', (e) => {
     }
   }
 
-  // Phím Enter
-  if (e.key === 'Enter') {
+  // Hàm xử lý Enter / Space toàn cục cho AutoCAD
+  function handleGlobalConfirm(e) {
     if (document.activeElement === cliInput || document.activeElement === dynInput || (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA'))) {
       return;
     }
-    // Generic Enter Key Handler cho plugin hoặc custom tool
-    if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
-      let th = window.cadPluginHooks.toolHandlers[currentTool];
-      if (typeof th.onEnter === 'function') {
-        th.onEnter();
-        return;
-      }
-    }
-    if (window.cadPluginHooks && Array.isArray(window.cadPluginHooks.enterHandlers)) {
-      for (let fn of window.cadPluginHooks.enterHandlers) {
-        try {
-          let handled = fn();
-          if (handled === true) return;
-        } catch (err) { console.error(err); }
-      }
-    }
-  }
 
-  // Phím Space (Phím cách): Tương tự phím ENTER trong AutoCAD chuẩn
-  if (e.key === ' ' && document.activeElement !== cliInput && document.activeElement !== dynInput && (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'))) {
+    // 1. Generic Enter Key Handler cho plugin hoặc custom tool
     if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
       let th = window.cadPluginHooks.toolHandlers[currentTool];
       if (typeof th.onEnter === 'function') {
-        e.preventDefault();
+        if (e) e.preventDefault();
         th.onEnter();
         return;
       }
     }
+
+    // 2. Các handler Enter từ Plugin nạp ngoài
     if (window.cadPluginHooks && Array.isArray(window.cadPluginHooks.enterHandlers)) {
       for (let fn of window.cadPluginHooks.enterHandlers) {
         try {
           let handled = fn();
           if (handled === true) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             return;
           }
         } catch (err) { console.error(err); }
       }
     }
+
+    // 3. Kết thúc vẽ Polyline nếu đang vẽ dở
+    if (currentTool === 'POLYLINE' && typeof isDrawing !== 'undefined' && isDrawing && typeof finishPolyline === 'function') {
+      if (e) e.preventDefault();
+      finishPolyline();
+      return;
+    }
+
+    // 4. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
+    if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
+      if (typeof dynamicCommands !== 'undefined' && dynamicCommands[currentTool]) {
+        if (e) e.preventDefault();
+        dynamicCommands[currentTool].handler();
+        return;
+      }
+      if (typeof window['c_' + currentTool] === 'function') {
+        if (e) e.preventDefault();
+        window['c_' + currentTool]();
+        return;
+      }
+    }
+
+    // 5. Lặp lại lệnh gần nhất (Repeat Last Command)
+    let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
+    if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+      if (e) e.preventDefault();
+      if (typeof logToCliHistory === 'function') logToCliHistory(`Lặp lại lệnh: ${lastCmd}`, 'prompt');
+      if (typeof runCommand === 'function') runCommand(lastCmd);
+      return;
+    }
+  }
+
+  // Phím Enter
+  if (e.key === 'Enter') {
+    handleGlobalConfirm(e);
+  }
+
+  // Phím Space (Phím cách): Tương tự phím ENTER trong AutoCAD chuẩn
+  if (e.key === ' ') {
+    handleGlobalConfirm(e);
   }
 
   // Tự động nhận diện gõ phím từ bàn phím (Auto-focus to Command Line hoặc Dynamic Input)

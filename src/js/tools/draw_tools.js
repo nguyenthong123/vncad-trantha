@@ -61,9 +61,11 @@ viewport.addEventListener('mousedown', (e) => {
       }
     }
 
-    // 1. Kiểm tra xem có đang ở chế độ Chọn (SELECT) hoặc Plugin Tool cho phép Selection không
+    // 1. Kiểm tra xem có đang ở chế độ Chọn (SELECT), Modify Tool hoặc Plugin Tool không
     let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
-    const isSelectionMode = (currentTool === 'SELECT' || (pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection)));
+    const DRAWING_TOOLS = ['LINE', 'POLYLINE', 'RECTANGLE', 'CIRCLE', 'ARC', 'ELLIPSE', 'POLYGON', 'DIMENSION', 'TEXT', 'HATCH', 'DIST'];
+    const isDrawTool = DRAWING_TOOLS.includes(currentTool);
+    const isSelectionMode = !isDrawTool || currentTool === 'SELECT' || (pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection));
 
     if (isSelectionMode) {
       // Tìm đối tượng có khoảng cách GẦN NHẤT với điểm click chuột
@@ -93,8 +95,15 @@ viewport.addEventListener('mousedown', (e) => {
         renderPropertiesPanel();
         if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
           pluginTool.onSelectionChange(selectedIds, false);
+        } else if (currentTool && currentTool !== 'SELECT' && !isDrawTool) {
+          setInfo(`👉 [${currentTool}] Đã chọn #${found.id} (${found.type}). Nhấn ENTER hoặc SPACE để thực thi lệnh.`);
         } else {
-          setInfo(`✅ Đã chọn #${found.id} (${found.type}). Mở Bảng Thuộc Tính đổi màu/độ dày nét hoặc dùng DEL, M, CO, RO...`);
+          let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
+          if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+            setInfo(`✅ Đã chọn #${found.id} (${found.type}). Nhấn ENTER / SPACE để chạy lệnh [${lastCmd}] hoặc mở PR / M, CO, RO...`);
+          } else {
+            setInfo(`✅ Đã chọn #${found.id} (${found.type}). Mở Bảng Thuộc Tính đổi màu/độ dày nét hoặc dùng DEL, M, CO, RO...`);
+          }
         }
         isBoxSelecting = false;
       } else {
@@ -115,6 +124,8 @@ window.addEventListener('mouseup', (e) => {
   isPanning = false;
 
   let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
+  const DRAWING_TOOLS = ['LINE', 'POLYLINE', 'RECTANGLE', 'CIRCLE', 'ARC', 'ELLIPSE', 'POLYGON', 'DIMENSION', 'TEXT', 'HATCH', 'DIST'];
+  const isDrawTool = DRAWING_TOOLS.includes(currentTool);
 
   // Kiểm tra nếu tool hiện tại là Plugin Tool
   if (pluginTool && typeof pluginTool.onMouseUp === 'function') {
@@ -157,9 +168,16 @@ window.addEventListener('mouseup', (e) => {
           setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấp Điểm Gốc (Base Point)...`);
         } else if (currentTool === 'ERASE') {
           setInfo(`👉 [ERASE] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER hoặc DEL để xóa.`);
+        } else if (currentTool && currentTool !== 'SELECT' && !isDrawTool) {
+          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER hoặc SPACE để thực thi lệnh.`);
         } else {
           const modeName = isCrossing ? '🟩 Crossing Selection' : '🟦 Window Selection';
-          setInfo(`${modeName}: Đã chọn ${selectedIds.size} đối tượng. Bạn có thể đổi màu, chỉnh nét hoặc gọi lệnh M, CO, RO...`);
+          let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
+          if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+            setInfo(`${modeName}: Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER / SPACE để chạy lệnh [${lastCmd}] hoặc gọi M, CO, RO...`);
+          } else {
+            setInfo(`${modeName}: Đã chọn ${selectedIds.size} đối tượng. Bạn có thể đổi màu, chỉnh nét hoặc gọi lệnh M, CO, RO...`);
+          }
         }
       } else {
         setInfo("💡 Không có đối tượng nào trong vùng quét.");
