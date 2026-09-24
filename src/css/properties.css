@@ -1,0 +1,135 @@
+/* DOCKED / FLOATING PROPERTIES PANEL (QUICK PROPERTIES) */
+#properties-panel {
+  position: absolute;
+  right: 14px;
+  top: 58px;
+  width: 310px;
+  max-height: calc(100vh - 110px);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+#properties-panel.hidden {
+  display: none;
+}
+
+.prop-header {
+  background: #1e293b;
+  padding: 8px 12px;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.prop-header .close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.prop-header .close-btn:hover {
+  color: #ef4444;
+}
+
+.prop-body {
+  padding: 10px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 160px);
+}
+
+.prop-section-title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #fbbf24;
+  font-weight: 800;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 3px;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.prop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.prop-label {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 11.5px;
+  white-space: nowrap;
+  width: 85px;
+}
+
+.prop-control {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.prop-select, .prop-input {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  outline: none;
+  font-family: monospace;
+  width: 100%;
+}
+
+.prop-select:focus, .prop-input:focus {
+  border-color: #38bdf8;
+}
+
+.color-swatch-list {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.swatch-item {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1.5px solid #475569;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.swatch-item:hover {
+  transform: scale(1.2);
+  border-color: #fff;
+}
+
+.swatch-item.active {
+  border-color: #fff;
+  box-shadow: 0 0 8px #fff;
+}

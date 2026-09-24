@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VinaCAD Professional Web Studio</title>
+<!-- STYLES -->
+<link rel="stylesheet" href="css/main.css" />
+<link rel="stylesheet" href="css/ribbon.css" />
+<link rel="stylesheet" href="css/properties.css" />
+<link rel="stylesheet" href="css/modal.css" />
+</head>
+<body>
+<div id="app">
+  <!-- TOP RIBBON -->
+  <div id="ribbon">
+    <div class="brand">📐 VINACAD</div>
+    
+    <!-- QUICK BUTTON & COMMAND SPOTLIGHT FINDER -->
+    <div class="ribbon-search-container">
+      <span class="ribbon-search-icon">🔍</span>
+      <input type="text" id="ribbon-search-input" class="ribbon-search-input" placeholder="Tìm nút / lệnh... (Ctrl+K)" autocomplete="off" spellcheck="false" title="Tìm nhanh nút công cụ và lệnh (Phím tắt: Ctrl+K)" />
+      <button id="ribbon-search-clear" class="ribbon-search-clear" title="Xóa tìm kiếm">✕</button>
+      <div id="ribbon-search-dropdown" class="ribbon-search-dropdown"></div>
+    </div>
+    <div class="sep"></div>
+
+    <!-- GROUP 1: HIỆU CHỈNH (MODIFY) -->
+    <div class="btn-group">
+      <button class="btn active" id="btn-SELECT" onclick="selectTool('SELECT')">👆 Chọn</button>
+      <button class="btn" id="btn-MOVE" onclick="selectTool('MOVE')">✥ Move (M)</button>
+      <button class="btn" id="btn-COPY" onclick="selectTool('COPY')">📋 Copy (CO)</button>
+      <button class="btn" id="btn-OFFSET" onclick="selectTool('OFFSET')">⚡ Offset (O)</button>
+      <button class="btn" id="btn-ROTATE" onclick="selectTool('ROTATE')">🔄 Rotate (RO)</button>
+      <button class="btn" id="btn-SCALE" onclick="selectTool('SCALE')">📐 Scale (SC)</button>
+      <button class="btn" id="btn-MIRROR" onclick="selectTool('MIRROR')">🪞 Mirror (MI)</button>
+      <button class="btn" id="btn-EXPLODE" onclick="selectTool('EXPLODE')">💥 Explode (X)</button>
+      <button class="btn btn-warning" id="btn-ERASE" onclick="deleteSelection()">❌ Xóa (DEL)</button>
+      <button class="btn btn-danger" id="btn-CLEAR" onclick="clearCanvas()">🧹 Xóa Hết (CLEAR)</button>
+    </div>
+    <div class="sep"></div>
+
+    <!-- GROUP 2: VẼ (DRAW) -->
+    <div class="btn-group">
+      <button class="btn" id="btn-LINE" onclick="selectTool('LINE')">📏 Line (L)</button>
+      <button class="btn" id="btn-POLYLINE" onclick="selectTool('POLYLINE')">📐 Poly (PL)</button>
+      <button class="btn" id="btn-RECTANGLE" onclick="selectTool('RECTANGLE')">⬛ Rect (REC)</button>
+      <button class="btn" id="btn-CIRCLE" onclick="selectTool('CIRCLE')">⭕ Circle (C)</button>
+      <button class="btn" id="btn-ARC" onclick="selectTool('ARC')">⌒ Arc (A)</button>
+      <button class="btn" id="btn-ELLIPSE" onclick="selectTool('ELLIPSE')">🥚 Ellipse (EL)</button>
+      <button class="btn" id="btn-POLYGON" onclick="selectTool('POLYGON')">🔷 Polygon (POL)</button>
+      <button class="btn" id="btn-HATCH" onclick="selectTool('HATCH')">🎨 Hatch (H)</button>
+      <button class="btn" id="btn-DIMENSION" onclick="selectTool('DIMENSION')">📏 Dim (DLI)</button>
+      <button class="btn" id="btn-TEXT" onclick="selectTool('TEXT')">🔤 Text (DT)</button>
+    </div>
+    <div class="sep"></div>
+
+    <!-- GROUP 3: THUỘC TÍNH NHANH (PROPERTIES) -->
+    <div class="btn-group" style="display:inline-flex; align-items:center; gap:5px; background:rgba(30, 41, 59, 0.7); padding:2px 7px; border-radius:6px; border:1px solid #334155;">
+      <span style="font-size:11px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:3px;">🎨 Màu:</span>
+      <div id="ribbon-color-swatches" style="display:inline-flex; align-items:center; gap:3px;">
+        <div class="ribbon-swatch" onclick="changePropColor('#ffffff')" title="Màu Trắng (White)" style="background:#ffffff; border:1px solid #94a3b8;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#ef4444')" title="Màu Đỏ (Red)" style="background:#ef4444;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#eab308')" title="Màu Vàng (Yellow)" style="background:#eab308;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#22c55e')" title="Màu Xanh Lá (Green)" style="background:#22c55e;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#38bdf8')" title="Màu Cyan / ByLayer" style="background:#38bdf8;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#3b82f6')" title="Màu Xanh Dương (Blue)" style="background:#3b82f6;"></div>
+        <div class="ribbon-swatch" onclick="changePropColor('#d946ef')" title="Màu Tím (Magenta)" style="background:#d946ef;"></div>
+        <input type="color" id="ribbon-color-picker" value="#38bdf8" onchange="changePropColor(this.value)" oninput="changePropColor(this.value)" style="width:18px; height:18px; border:1px solid #475569; border-radius:3px; cursor:pointer; background:none; padding:0;" title="Bảng mã màu khác..." />
+      </div>
+      <select id="ribbon-layer-select" class="prop-select" style="width:85px; padding:2px 4px; font-size:11px;" onchange="changePropLayer(this.value)" title="Lớp (Layer)">
+        <option value="0">Layer 0</option>
+        <option value="WALL">WALL</option>
+        <option value="TRAN_THA">TRAN_THA</option>
+        <option value="DIM">DIM</option>
+        <option value="TEXT">TEXT</option>
+        <option value="HATCH">HATCH</option>
+      </select>
+      <select id="ribbon-width-select" class="prop-select" style="width:85px; padding:2px 4px; font-size:11px;" onchange="changePropWidth(parseFloat(this.value))" title="Độ dày nét">
+        <option value="1">Nét 0.15</option>
+        <option value="2" selected>Nét 0.25</option>
+        <option value="3">Nét 0.35</option>
+        <option value="4">Nét 0.50</option>
+        <option value="6">Nét 0.70</option>
+      </select>
+      <select id="ribbon-linetype-select" class="prop-select" style="width:88px; padding:2px 4px; font-size:11px;" onchange="changePropLineType(this.value)" title="Kiểu đường nét">
+        <option value="CONTINUOUS">Liền (—)</option>
+        <option value="DASHED">Đứt (--)</option>
+        <option value="CENTER">Trục (-·-)</option>
+        <option value="DOTTED">Chấm (···)</option>
+      </select>
+      <button class="btn btn-accent" id="btn-PROPERTIES" onclick="togglePropertiesPanel()" title="Bật/Tắt Bảng Thuộc Tính Chi Tiết (Lệnh PR / MO)">📋 Bảng Thuộc Tính (PR)</button>
+    </div>
+    <div class="sep"></div>
+
+    <!-- GROUP 4: TIỆN ÍCH, APPLOAD & FILE -->
+    <div class="btn-group" id="plugin-ribbon-group">
+      <button class="btn btn-accent" id="btn-NEW" onclick="createNewDrawing(true)" title="Tạo bản vẽ mới sạch sẽ (Phím tắt: Ctrl+N / Cmd+N hoặc gõ lệnh NEW)">📄 Mới (Ctrl+N)</button>
+      <button class="btn btn-highlight" id="btn-APPLOAD" onclick="openApploadModal()" title="Quản lý và Nạp file Tool / AutoLISP mở rộng">🧩 Nạp Tool (APPLOAD) <span id="tool-count-badge" style="background:#ef4444; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; margin-left:2px;">0</span></button>
+      <button class="btn btn-accent" id="btn-OPEN" onclick="openFilePicker()">📂 Mở File (OPEN)</button>
+      <button class="btn btn-accent" id="btn-SAVE" onclick="saveJSON()">💾 Lưu JSON</button>
+      <button class="btn btn-accent" id="btn-DXF" onclick="exportDXF()">📥 Xuất DXF</button>
+      <button class="btn btn-ortho" id="btn-ORTHO" onclick="toggleOrtho()">📐 ORTHO (F8): <span id="ortho-status">OFF</span></button>
+      <button class="btn" id="btn-DIST" onclick="selectTool('DIST')">📏 Đo (DI)</button>
+      <button class="btn" id="btn-PAN" onclick="selectTool('PAN')">✋ Pan (P)</button>
+      <button class="btn" id="btn-ZOOM" onclick="zoomAll()">🔍 Zoom All (Z)</button>
+      <button class="btn" id="btn-TOP" onclick="setViewRotation(0)" title="Đưa góc nhìn về TOP (0 độ) chuẩn mặt bằng">⬆️ Top (0°)</button>
+      <button class="btn" id="btn-ROTATEVIEW" onclick="rotateView(15)" title="Xoay góc nhìn 2D thêm 15 độ">🔄 Xoay 15°</button>
+      <button class="btn btn-accent" id="btn-VIEW3D" onclick="open3DView()" title="Mở cửa sổ xem 3D Phối Cảnh Hệ Trần Thả (Lệnh 3D / TT3D)">📦 Xem 3D</button>
+      <button class="btn btn-highlight" id="btn-SECTION" onclick="openSectionView()" title="Mở Bản vẽ Mặt Cắt Kỹ Thuật Chi Tiết 2D (Lệnh SECTION / TTSEC)">🔍 Mặt Cắt</button>
+      <button class="btn" id="btn-UNDO" onclick="undoAction()" title="Hoàn tác thao tác trước (Phím tắt: Ctrl+Z hoặc U)">↩️ Undo</button>
+      <button class="btn" id="btn-REDO" onclick="redoAction()" title="Làm lại thao tác vừa hoàn tác (Phím tắt: Ctrl+Y)">↪️ Redo</button>
+    </div>
+  </div>
+
+  <!-- HIDDEN FILE UPLOADER FOR OPEN/IMPORT -->
+  <input type="file" id="cad-file-input" accept=".json,.dxf,.txt" style="display:none" onchange="handleFileInput(event)" />
+
+  <!-- APPLOAD MODAL DIALOG (BẢNG QUẢN LÝ & NẠP NHIỀU TOOL AUTOLISP / PLUGINS) -->
+  <div id="appload-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          🧩 BẢNG QUẢN LÝ & NẠP NHIỀU TOOL MỞ RỘNG (APPLOAD / MULTI-PLUGINS)
+        </div>
+        <button class="modal-close" onclick="closeApploadModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Top Action Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="color:#94a3b8; font-size:12px;">
+            Đã nạp: <b id="modal-tool-count-badge" style="color:#38bdf8;">0</b> tool (<b id="cmd-count-badge" style="color:#facc15;">0</b> lệnh sẵn sàng)
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="document.getElementById('tool-file-input').click()" class="btn btn-accent" style="padding:6px 14px; font-size:12px;">📤 Tải Lên Nhiều File Tool (.lsp / .js / .py)</button>
+            <button onclick="clearAllCustomTools()" class="btn btn-danger" style="padding:6px 12px; font-size:12px;" title="Xóa tất cả các tool mở rộng đã nạp">🗑️ Gỡ Tất Cả</button>
+            <input type="file" id="tool-file-input" accept=".lsp,.js,.py,.json,.txt" multiple style="display:none;" onchange="handleToolFileUpload(event)" />
+          </div>
+        </div>
+
+        <!-- Drag & Drop Dropzone -->
+        <div id="appload-dropzone" class="appload-dropzone" onclick="document.getElementById('tool-file-input').click()">
+          <div style="font-size:24px; line-height:1.2;">📥</div>
+          <div style="font-weight:700; color:#38bdf8; font-size:13px; margin-top:4px;">Kéo & Thả nhiều file Tool (.lsp, .js, .py) vào đây</div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:2px;">(Hỗ trợ nạp cùng lúc nhiều file AutoLISP & Plugin JS độc lập)</div>
+        </div>
+
+        <!-- Tool Table -->
+        <div style="max-height:220px; overflow-y:auto; border:1px solid #334155; border-radius:6px;">
+          <table class="tool-table">
+            <thead>
+              <tr>
+                <th style="min-width:140px;">Tên Tool & Tệp</th>
+                <th style="min-width:160px;">Các Lệnh Gọi (Click để chạy)</th>
+                <th>Mô Tả & Thông Tin</th>
+                <th style="text-align:center; width:90px;">Trạng Thái</th>
+                <th style="text-align:center; width:100px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="appload-table-body">
+              <!-- Rendered dynamically by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Add Custom Script Panel -->
+        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px;">
+          <div style="font-weight:700; color:#fbbf24; font-size:12.5px; margin-bottom:8px;">⚡ Thêm Script AutoLISP / Plugin JavaScript Tùy Chỉnh:</div>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <input id="new-tool-name" type="text" placeholder="Tên Tool (ví dụ: Tool Bóc Tách Tường, Chia Ô...)" style="flex:1; background:#0f172a; border:1px solid #334155; color:#f8fafc; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
+            <input id="new-tool-cmd" type="text" placeholder="Lệnh CLI (vd: MYTOOL, WALL, CUT)" style="width:180px; background:#0f172a; border:1px solid #334155; color:#38bdf8; font-family:monospace; font-weight:bold; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
+          </div>
+          <textarea id="new-tool-code" placeholder="Dán nội dung mã AutoLISP hoặc JavaScript vào đây..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; color:#4ade80; font-family:monospace; font-size:11.5px; padding:8px 10px; border-radius:4px; outline:none; resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+            <button onclick="registerCustomTool()" class="btn btn-highlight" style="padding:6px 16px;">⚡ Nạp & Lưu Tool Vào Hệ Thống</button>
+          </div>
+        </div>
+      </div>
+      <div style="background:#1e293b; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #334155;">
+        <span style="font-size:11.5px; color:#94a3b8;">💡 Mẹo: Có thể nạp nhiều file tool cùng lúc. Các lệnh từ tất cả file tool sẽ tự động kết hợp trên thanh COMMAND (CLI).</span>
+        <button onclick="closeApploadModal()" class="btn" style="padding:5px 16px;">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CANVAS & FLOATING PANELS -->
+  <div id="viewport">
+    <canvas id="cadCanvas"></canvas>
+    <div id="hud-coords">X: 0.0 | Y: 0.0 mm</div>
+    <div id="hud-db-status" class="hud-db-saved" title="Trạng thái Cơ Sở Dữ Liệu Tự Động Lưu">🟢 CSDL: Sẵn sàng</div>
+    <div id="hud-info">💡 Sẵn sàng. Gõ lệnh hoặc chọn công cụ để bắt đầu vẽ.</div>
+    <div id="osnap-box"></div>
+    <!-- FLOATING DYNAMIC INPUT BOX -->
+    <div id="dyn-box">
+      <div id="dyn-label">KÍCH THƯỚC (mm):</div>
+      <input id="dyn-input" type="text" placeholder="Nhập số..." autocomplete="off" />
+    </div>
+
+    <!-- DOCKED / FLOATING QUICK PROPERTIES PANEL (ẨN MẶC ĐỊNH, CHỈ HIỆN KHI CHỌN ĐỐI TƯỢNG) -->
+    <div id="properties-panel" class="hidden">
+      <div class="prop-header">
+        <span id="prop-title">📋 THUỘC TÍNH (PROPERTIES)</span>
+        <button class="close-btn" onclick="togglePropertiesPanel(false)">✕</button>
+      </div>
+      <div class="prop-body" id="prop-body">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTOCAD CLI & COMMAND PROMPT HISTORY -->
+  <div id="cli-container">
+    <div id="cli-history" class="cli-history-window">
+      <div class="cli-hist-line cli-hist-info">📐 VinaCAD 2026 Graphics Engine Ready. Type APPLOAD or HELP.</div>
+      <div class="cli-hist-line cli-hist-success">🟢 CSDL IndexedDB: Đã kết nối tự động lưu an toàn.</div>
+    </div>
+    <div id="cli">
+      <span id="cli-label">COMMAND:</span>
+      <input id="cli-input" type="text" placeholder="Nhập lệnh (L, PL, REC, C, ARC, PR, APPLOAD, DXF, DEL...)" autofocus />
+      <span id="cli-msg">OSNAP: ON | GRID: ON | ORTHO: OFF [F8]</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS (Loaded sequentially or bundled) -->
+<script src="js/core/db.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/math.js"></script>
+<script src="js/core/osnap.js"></script>
+<script src="js/renderer/canvas.js"></script>
+<script src="js/renderer/entity_renderer.js"></script>
+<script src="js/renderer/overlays.js"></script>
+<script src="js/tools/selection.js"></script>
+<script src="js/tools/modify_tools.js"></script>
+<script src="js/tools/draw_tools.js"></script>
+<script src="js/ui/properties_panel.js"></script>
+<script src="js/ui/appload_modal.js"></script>
+<script src="js/ui/cli.js"></script>
+<script src="js/io/json_io.js"></script>
+<script src="js/io/dxf_io.js"></script>
+<script>
+  // Startup initialization with IndexedDB auto-recovery
+  if (typeof initVinaCAD_DB === 'function') {
+    initVinaCAD_DB(() => {
+      renderPropertiesPanel();
+      resize();
+      animate();
+    });
+  } else {
+    renderPropertiesPanel();
+    resize();
+    animate();
+  }
+</script>
+</body>
+</html>
