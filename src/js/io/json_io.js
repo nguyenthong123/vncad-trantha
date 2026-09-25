@@ -6,11 +6,7 @@
 let lastFilePickerOpenTime = 0;
 let isFileLoading = false;
 
-function createNewDrawing(confirmPrompt = true) {
-  if (confirmPrompt && typeof entities !== 'undefined' && entities.length > 0) {
-    let ok = confirm("Bạn có chắc chắn muốn tạo bản vẽ mới? Bản vẽ hiện tại sẽ được lưu vào cơ sở dữ liệu ngầm.");
-    if (!ok) return;
-  }
+function doResetDrawing() {
   if (typeof saveState === 'function') saveState();
   entities = [];
   selectedIds.clear();
@@ -25,6 +21,26 @@ function createNewDrawing(confirmPrompt = true) {
   if (typeof selectTool === 'function') selectTool('SELECT');
   if (typeof setInfo === 'function') setInfo("📄 Đã tạo bản vẽ mới sạch sẽ (Ctrl+N / Lệnh NEW). Nhập L, PL, REC hoặc APPLOAD để bắt đầu vẽ.");
   if (typeof logToCliHistory === 'function') logToCliHistory("Tạo bản vẽ mới: NEW (Ctrl+N)", "cmd");
+}
+
+function createNewDrawing(confirmPrompt = true) {
+  if (confirmPrompt && typeof entities !== 'undefined' && entities.length > 0) {
+    if (typeof showCadConfirm === 'function') {
+      showCadConfirm({
+        title: "Tạo Bản Vẽ Mới (NEW)",
+        message: "Bạn có chắc chắn muốn tạo bản vẽ mới không?<br><span style='color:#94a3b8; font-size:12px;'>Bản vẽ hiện tại sẽ tự động được lưu an toàn vào cơ sở dữ liệu IndexedDB.</span>",
+        type: "warning",
+        confirmText: "📄 Tạo Mới",
+        cancelText: "Hủy Bỏ",
+        onConfirm: doResetDrawing
+      });
+      return;
+    } else {
+      let ok = confirm("Bạn có chắc chắn muốn tạo bản vẽ mới? Bản vẽ hiện tại sẽ được lưu vào cơ sở dữ liệu ngầm.");
+      if (!ok) return;
+    }
+  }
+  doResetDrawing();
 }
 
 /**

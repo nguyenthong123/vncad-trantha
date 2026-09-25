@@ -714,12 +714,24 @@ function registerCustomTool() {
 function removeCustomTool(idx) {
   if (customTools[idx]) {
     let toolName = customTools[idx].name;
-    if (confirm(`Bạn có chắc chắn muốn gỡ bỏ Tool [${toolName}] không?`)) {
-      customTools.splice(idx, 1);
-      saveCustomToolsToStorage();
-      renderApploadTable();
-      setInfo(`🗑️ Đã gỡ bỏ Tool [${toolName}].`);
-    }
+    showCadConfirm({
+      title: "Gỡ Bỏ Tool Mở Rộng",
+      message: `Bạn có chắc chắn muốn gỡ bỏ Tool <b style="color:#38bdf8;">[${toolName}]</b> khỏi hệ thống VinaCAD không?`,
+      type: "danger",
+      confirmText: "🗑️ Gỡ Bỏ",
+      cancelText: "Hủy Bỏ",
+      onConfirm: function() {
+        customTools.splice(idx, 1);
+        saveCustomToolsToStorage();
+        renderApploadTable();
+        setInfo(`🗑️ Đã gỡ bỏ Tool [${toolName}].`);
+        showCadAlert({
+          title: "Đã Gỡ Bỏ",
+          message: `Đã gỡ bỏ thành công tool <b>[${toolName}]</b>.`,
+          type: "info"
+        });
+      }
+    });
   }
 }
 
@@ -735,18 +747,25 @@ function clearAllCustomTools() {
     });
     return;
   }
-  if (confirm(`Bạn có chắc chắn muốn gỡ bỏ TẤT CẢ ${customTools.length} tool ngoài đã nạp không?`)) {
-    customTools = [];
-    dynamicCommands = {};
-    saveCustomToolsToStorage();
-    renderApploadTable();
-    setInfo("🗑️ Đã xóa sạch toàn bộ các tool mở rộng.");
-    showCadAlert({
-      title: "Đã Gỡ Bỏ",
-      message: "Đã xóa sạch toàn bộ các tool mở rộng khỏi hệ thống.",
-      type: "info"
-    });
-  }
+  showCadConfirm({
+    title: "Gỡ Bỏ Tất Cả Tool Mở Rộng",
+    message: `Bạn có chắc chắn muốn gỡ bỏ <b style="color:#ef4444;">TẤT CẢ ${customTools.length} tool ngoài</b> đã nạp không?<br><span style="color:#94a3b8; font-size:12px; margin-top:6px; display:inline-block;">⚡ Thao tác này sẽ xóa sạch toàn bộ các lệnh và script mở rộng khỏi hệ thống VinaCAD.</span>`,
+    type: "danger",
+    confirmText: "🗑️ Gỡ Tất Cả",
+    cancelText: "Hủy Bỏ",
+    onConfirm: function() {
+      customTools = [];
+      dynamicCommands = {};
+      saveCustomToolsToStorage();
+      renderApploadTable();
+      setInfo("🗑️ Đã xóa sạch toàn bộ các tool mở rộng.");
+      showCadAlert({
+        title: "Đã Xóa Sạch",
+        message: "Đã xóa sạch toàn bộ các tool mở rộng khỏi hệ thống VinaCAD.",
+        type: "success"
+      });
+    }
+  });
 }
 
 /**
@@ -816,7 +835,6 @@ window.showCadAlert = function(options) {
     if (message.includes('Đã nạp thành công') || message.includes('lệnh') || message.includes('CLI')) {
       title = "🧩 Nạp Tool Thành Công!";
       type = "success";
-      // Trích xuất tự động danh sách lệnh nếu chuỗi chứa "lệnh ...:"
       let match = message.match(/(?:lệnh[^:]*:|nhận diện:)\s*([A-Za-z0-9_,\s]+)/i);
       if (match && match[1]) {
         cmds = match[1].split(/[, \n]+/).filter(c => c && c.trim().length > 0);
@@ -836,7 +854,7 @@ window.showCadAlert = function(options) {
   const backdrop = document.getElementById('cad-dialog-backdrop');
   const titleEl = document.getElementById('cad-dialog-title');
   const bodyEl = document.getElementById('cad-dialog-body');
-  const okBtn = document.getElementById('cad-dialog-ok-btn');
+  const footerEl = document.getElementById('cad-dialog-footer');
 
   if (!backdrop || !titleEl || !bodyEl) {
     console.log(`[${title}] ${message}`);
@@ -870,15 +888,94 @@ window.showCadAlert = function(options) {
 
   bodyEl.innerHTML = html;
 
-  if (okBtn) {
-    okBtn.onclick = function() {
-      closeCadDialog();
-      if (typeof onConfirm === 'function') onConfirm();
-    };
-    setTimeout(() => {
-      try { okBtn.focus(); } catch (e) {}
-    }, 60);
+  if (footerEl) {
+    footerEl.innerHTML = `<button class="cad-dialog-btn-primary" id="cad-dialog-ok-btn">Đồng Ý (OK)</button>`;
+    const okBtn = document.getElementById('cad-dialog-ok-btn');
+    if (okBtn) {
+      okBtn.onclick = function() {
+        closeCadDialog();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+      setTimeout(() => {
+        try { okBtn.focus(); } catch (e) {}
+      }, 60);
+    }
   }
+
+  backdrop.style.display = 'flex';
+};
+
+window.showCadConfirm = function(options) {
+  let title = "❓ Xác Nhận Thao Tác";
+  let message = "";
+  let type = "warning";
+  let confirmText = "Đồng Ý";
+  let cancelText = "Hủy Bỏ";
+  let onConfirm = null;
+  let onCancel = null;
+
+  if (typeof options === 'string') {
+    message = options;
+  } else if (typeof options === 'object' && options !== null) {
+    title = options.title || title;
+    message = options.message || "";
+    type = options.type || type;
+    confirmText = options.confirmText || confirmText;
+    cancelText = options.cancelText || cancelText;
+    onConfirm = options.onConfirm || null;
+    onCancel = options.onCancel || null;
+  }
+
+  const backdrop = document.getElementById('cad-dialog-backdrop');
+  const titleEl = document.getElementById('cad-dialog-title');
+  const bodyEl = document.getElementById('cad-dialog-body');
+  const footerEl = document.getElementById('cad-dialog-footer');
+
+  if (!backdrop || !titleEl || !bodyEl || !footerEl) {
+    if (confirm(message)) {
+      if (typeof onConfirm === 'function') onConfirm();
+    } else {
+      if (typeof onCancel === 'function') onCancel();
+    }
+    return;
+  }
+
+  let icon = "❓";
+  let confirmBtnClass = "cad-dialog-btn-primary";
+  if (type === 'danger' || type === 'error') {
+    icon = "🗑️";
+    titleEl.style.color = '#ef4444';
+    confirmBtnClass = "btn btn-danger";
+  } else if (type === 'warning') {
+    icon = "⚠️";
+    titleEl.style.color = '#facc15';
+    confirmBtnClass = "btn btn-highlight";
+  } else if (type === 'success') {
+    icon = "🚀";
+    titleEl.style.color = '#4ade80';
+  } else {
+    icon = "ℹ️";
+    titleEl.style.color = '#38bdf8';
+  }
+
+  titleEl.innerHTML = `${icon} ${title}`;
+  let formattedMsg = message.replace(/\n/g, '<br>');
+  bodyEl.innerHTML = `<div style="font-size:14px; line-height:1.6; color:#e2e8f0;">${formattedMsg}</div>`;
+
+  footerEl.innerHTML = `
+    <button class="cad-dialog-btn-cancel" id="cad-dialog-cancel-btn">${cancelText}</button>
+    <button class="${confirmBtnClass}" id="cad-dialog-confirm-action-btn" style="padding:7px 20px; font-weight:800; font-size:13px; border-radius:6px; cursor:pointer;">${confirmText}</button>
+  `;
+
+  document.getElementById('cad-dialog-cancel-btn').onclick = function() {
+    closeCadDialog();
+    if (typeof onCancel === 'function') onCancel();
+  };
+
+  document.getElementById('cad-dialog-confirm-action-btn').onclick = function() {
+    closeCadDialog();
+    if (typeof onConfirm === 'function') onConfirm();
+  };
 
   backdrop.style.display = 'flex';
 };
@@ -890,7 +987,6 @@ window.closeCadDialog = function() {
   }
 };
 
-// Ghi đè alert mặc định của trình duyệt để hiển thị popup trung tâm giao diện chuẩn CAD
 window.alert = function(msg) {
   window.showCadAlert(msg);
 };
