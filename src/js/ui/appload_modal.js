@@ -218,16 +218,22 @@ function executeLispScript(code, toolId) {
 /**
  * Thực thi và kích hoạt mã nguồn của Tool
  */
-function executeToolCode(tool) {
+function executeToolCode(tool, throwOnError = false) {
   if (!tool || !tool.code || tool.enabled === false) return;
   if (tool._isExecuted) return;
   tool._isExecuted = true;
   let isLsp = tool.type === 'AutoLISP' || (tool.fileName && tool.fileName.endsWith('.lsp')) || tool.code.includes('(defun');
 
   if (isLsp) {
-    let cmds = executeLispScript(tool.code, tool.id);
-    if (cmds.length > 0 && (!tool.commands || tool.commands.length === 0)) {
-      tool.commands = cmds;
+    try {
+      let cmds = executeLispScript(tool.code, tool.id);
+      if (cmds.length > 0 && (!tool.commands || tool.commands.length === 0)) {
+        tool.commands = cmds;
+      }
+    } catch (e) {
+      tool._isExecuted = false;
+      if (throwOnError) throw e;
+      console.warn(`Lỗi nạp AutoLISP tool [${tool.name}]:`, e);
     }
   } else {
     try {
@@ -257,6 +263,8 @@ function executeToolCode(tool) {
         });
       }
     } catch (e) {
+      tool._isExecuted = false;
+      if (throwOnError) throw e;
       console.warn(`Lỗi nạp JS tool [${tool.name}]:`, e);
     }
   }
@@ -492,22 +500,37 @@ function toggleToolStatus(idx) {
 
 /**
  * Xử lý danh sách nhiều File tải lên (Multi-file batch loader)
+ * Tự động chặn và báo tên cụ thể của từng tệp bị lỗi, không để tệp lỗi làm hỏng hệ thống
  */
 async function processFileList(files, showAlert = true) {
   if (!files || files.length === 0) return;
 
   let loadedCount = 0;
   let allNewCmds = [];
+  let errorList = [];
 
   for (let i = 0; i < files.length; i++) {
     let file = files[i];
     try {
       let content = await readFileAsText(file);
+      if (!content || !content.trim()) {
+        throw new Error("Tệp rỗng (0 KB), không chứa mã nguồn thực thi.");
+      }
+
       let name = file.name.replace(/\.[^/.]+$/, "");
       let isLsp = file.name.toLowerCase().endsWith('.lsp') || content.includes('(defun');
       let isPy = file.name.toLowerCase().endsWith('.py');
 
-      // Trích xuất tất cả các lệnh có trong file
+      // 1. Kiểm tra trước lỗi cú pháp JavaScript (Syntax Pre-check)
+      if (!isLsp && !isPy) {
+        try {
+          new Function(content);
+        } catch (syntaxErr) {
+          throw new Error(`Lỗi cú pháp JavaScript: ${syntaxErr.message}`);
+        }
+      }
+
+      // 2. Trích xuất danh sách lệnh
       let cmds = extractCommandsFromCode(content);
       if (cmds.length === 0) {
         let fallbackCmd = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -530,8 +553,8 @@ async function processFileList(files, showAlert = true) {
         loadedAt: Date.now()
       };
 
-      // Kích hoạt thực thi mã
-      executeToolCode(newTool);
+      // 3. Kích hoạt thực thi mã với chế độ bắt lỗi nghiêm ngặt (throwOnError = true)
+      executeToolCode(newTool, true);
 
       // Nếu đã tồn tại tool trùng fileName thì ghi đè (update), ngược lại thêm mới
       let existingIdx = customTools.findIndex(t => t.fileName === file.name || t.name === newTool.name);
@@ -544,13 +567,44 @@ async function processFileList(files, showAlert = true) {
       loadedCount++;
       cmds.forEach(c => allNewCmds.push(c));
     } catch (err) {
-      console.error(`Lỗi khi đọc file [${file.name}]:`, err);
+      console.error(`Lỗi khi nạp file [${file.name}]:`, err);
+      errorList.push({
+        fileName: file.name,
+        error: err.message || String(err)
+      });
+      if (typeof logToCliHistory === 'function') {
+        logToCliHistory(`❌ Bị chặn: Tệp [${file.name}] bị lỗi: ${err.message}`, 'prompt');
+      }
     }
   }
 
   saveCustomToolsToStorage();
   renderApploadTable();
 
+  // 1. Nếu có tệp bị lỗi -> Hiển thị thông báo chặn tệp lỗi với tên file cụ thể
+  if (errorList.length > 0) {
+    let errHtml = `Hệ thống đã phát hiện và <b>chặn lại ${errorList.length} tệp bị lỗi</b>:<br><br>`;
+    errorList.forEach((e) => {
+      errHtml += `<div style="background:#1e1e2e; border-left:3px solid #ef4444; padding:8px 12px; margin-bottom:8px; border-radius:4px; text-align:left;">
+        <div style="font-weight:700; color:#ef4444; font-size:13px;">📄 Tệp lỗi: ${e.fileName}</div>
+        <div style="color:#fca5a5; font-size:12px; margin-top:2px;">⚠️ <b>Chi tiết:</b> ${e.error}</div>
+      </div>`;
+    });
+
+    if (loadedCount > 0) {
+      errHtml += `<div style="color:#22c55e; margin-top:10px; font-weight:700;">✅ Các tệp hợp lệ khác (${loadedCount} Tool) đã được nạp thành công:</div>`;
+    }
+
+    showCadAlert({
+      title: "Phát Hiện Tệp Tool Bị Lỗi!",
+      message: errHtml,
+      cmds: allNewCmds,
+      type: "error"
+    });
+    return;
+  }
+
+  // 2. Nếu tất cả đều nạp thành công không có lỗi
   let msg = `🧩 Đã nạp thành công ${loadedCount} Tool (${allNewCmds.length} lệnh sẵn sàng: ${allNewCmds.join(', ')}).`;
   setInfo(msg, 'success');
   if (typeof logToCliHistory === 'function') {

@@ -67,28 +67,53 @@ function handleFileInput(e) {
 
 /**
  * Đọc nội dung file và nạp thẳng lên Canvas hoặc nạp Plugin ngầm
+ * Tự động chặn và báo tên cụ thể của tệp nếu tệp bị lỗi hoặc sai cấu trúc
  */
 function loadCadFile(file) {
   if (!file) return;
   let name = file.name.toLowerCase();
 
-  // 1. Nếu là file Tool / AutoLISP / Plugin JavaScript -> Nạp thẳng chạy luôn mà không mở popup thừa
+  // 1. Nếu là file Tool / AutoLISP / Plugin JavaScript -> Nạp qua bộ nạp Tool (có chặn lỗi tự động)
   if (name.endsWith('.lsp') || name.endsWith('.js') || name.endsWith('.py')) {
     if (typeof processFileList === 'function') {
-      processFileList([file], false);
+      processFileList([file], true);
       return;
     }
   }
 
-  // 2. Nếu là file Bản vẽ (JSON / DXF) -> Đọc và đưa thẳng lên màn hình vẽ ngay lập tức
+  // 2. Nếu là file Bản vẽ (JSON / DXF) -> Đọc và kiểm tra tính toàn vẹn
   let reader = new FileReader();
+
+  reader.onerror = function() {
+    if (typeof showCadAlert === 'function') {
+      showCadAlert({
+        title: "Lỗi Đọc Tệp Bản Vẽ",
+        message: `Không thể đọc tệp <b>${file.name}</b> từ thiết bị. Tệp có thể đang bị ứng dụng khác khóa hoặc bị hỏng.`,
+        type: "error"
+      });
+    }
+  };
+
   reader.onload = function(evt) {
     let content = evt.target.result;
 
+    if (!content || !content.trim()) {
+      if (typeof showCadAlert === 'function') {
+        showCadAlert({
+          title: "Tệp Bản Vẽ Rỗng",
+          message: `Tệp <b>${file.name}</b> rỗng (0 KB), không chứa dữ liệu hình học để hiển thị.`,
+          type: "warning"
+        });
+      }
+      return;
+    }
+
+    // A. XỬ LÝ FILE JSON
     if (name.endsWith('.json') || content.trim().startsWith('[') || content.trim().startsWith('{')) {
       try {
         let parsed = JSON.parse(content);
-        let loadedEnts = [];
+        let loadedEnts = null;
+
         if (Array.isArray(parsed)) {
           loadedEnts = parsed;
         } else if (parsed && parsed.entities && Array.isArray(parsed.entities)) {
@@ -101,7 +126,7 @@ function loadCadFile(file) {
           }
         }
 
-        if (loadedEnts.length >= 0) {
+        if (loadedEnts !== null && Array.isArray(loadedEnts)) {
           saveState();
           entities = loadedEnts;
           selectedIds.clear();
@@ -113,18 +138,31 @@ function loadCadFile(file) {
           setInfo(msg, 'success');
           if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
           return;
+        } else {
+          throw new Error("Cấu trúc JSON không chứa mảng 'entities' hợp lệ của bản vẽ CAD.");
         }
       } catch (err) {
-        alert("Lỗi đọc file JSON: " + err.message);
+        if (typeof showCadAlert === 'function') {
+          showCadAlert({
+            title: "Đã Chặn Tệp Bản Vẽ Lỗi!",
+            message: `Hệ thống đã chặn tệp <b>${file.name}</b> để bảo vệ bản vẽ hiện tại:<br><br>
+            <div style="background:#1e1e2e; border-left:3px solid #ef4444; padding:8px 12px; border-radius:4px; text-align:left;">
+              <div style="font-weight:700; color:#ef4444; font-size:13px;">📄 ${file.name}</div>
+              <div style="color:#fca5a5; font-size:12px; margin-top:2px;">⚠️ <b>Chi tiết:</b> ${err.message}</div>
+            </div>`,
+            type: "error"
+          });
+        }
         return;
       }
     }
 
+    // B. XỬ LÝ FILE DXF AUTOCAD
     if (name.endsWith('.dxf') || content.includes('SECTION') || content.includes('ENTITIES')) {
       try {
         if (typeof parseDXF === 'function') {
           let dxfEnts = parseDXF(content);
-          if (dxfEnts.length > 0) {
+          if (dxfEnts && dxfEnts.length > 0) {
             saveState();
             entities = dxfEnts;
             selectedIds.clear();
@@ -137,17 +175,35 @@ function loadCadFile(file) {
             if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
             return;
           } else {
-            alert("Không tìm thấy đối tượng 2D nào trong file DXF.");
-            return;
+            throw new Error("Không tìm thấy đối tượng hình học 2D nào tương thích trong file DXF.");
           }
+        } else {
+          throw new Error("Bộ phân tích DXF chưa được khởi tạo.");
         }
       } catch (err) {
-        alert("Lỗi đọc file DXF: " + err.message);
+        if (typeof showCadAlert === 'function') {
+          showCadAlert({
+            title: "Lỗi Đọc File DXF",
+            message: `Hệ thống đã chặn tệp DXF bị lỗi <b>${file.name}</b>:<br><br>
+            <div style="background:#1e1e2e; border-left:3px solid #ef4444; padding:8px 12px; border-radius:4px; text-align:left;">
+              <div style="font-weight:700; color:#ef4444; font-size:13px;">📄 ${file.name}</div>
+              <div style="color:#fca5a5; font-size:12px; margin-top:2px;">⚠️ <b>Chi tiết:</b> ${err.message}</div>
+            </div>`,
+            type: "error"
+          });
+        }
         return;
       }
     }
 
-    alert("Định dạng file không được hỗ trợ. Hãy chọn file .json, .dxf, .lsp hoặc .js.");
+    // C. ĐỊNH DẠNG KHÔNG HỢP LỆ
+    if (typeof showCadAlert === 'function') {
+      showCadAlert({
+        title: "Định Dạng Không Hỗ Trợ",
+        message: `Tệp <b>${file.name}</b> không thuộc định dạng được hỗ trợ.<br><br>Vui lòng chọn tệp bản vẽ (<b>.json</b>, <b>.dxf</b>) hoặc tệp Tool mở rộng (<b>.lsp</b>, <b>.js</b>, <b>.py</b>).`,
+        type: "warning"
+      });
+    }
   };
   reader.readAsText(file);
 }
