@@ -274,6 +274,9 @@ if (viewport) {
       pluginTool.onContextMenu(e);
       return;
     }
+    if (typeof window.handleGlobalConfirm === 'function') {
+      window.handleGlobalConfirm(e, true);
+    }
   });
 
   viewport.addEventListener('wheel', (e) => {

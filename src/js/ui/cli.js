@@ -98,6 +98,13 @@ window.registerPluginCommand = function(cmdName, handlerFn, description) {
   window.dynamicCommands[upper] = { handler: handlerFn, desc: description || `Lệnh Plugin [${upper}]` };
 };
 
+// Aliases directly inside window.cadPluginHooks for convenience
+window.cadPluginHooks.addOverlay = window.registerPluginOverlay;
+window.cadPluginHooks.addEscapeHandler = window.registerPluginEscapeHandler;
+window.cadPluginHooks.addEnterHandler = window.registerPluginEnterHandler;
+window.cadPluginHooks.addTool = window.registerPluginTool;
+window.cadPluginHooks.addCommand = window.registerPluginCommand;
+
 function logToCliHistory(text, type = 'info') {
   const hist = document.getElementById('cli-history');
   if (!hist || !text) return;
@@ -192,20 +199,31 @@ if (cliInput) {
       cliInput.value = '';
 
       if (!raw) {
-        // 1. Nếu có plugin tool enter handler
-        if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
-          let th = window.cadPluginHooks.toolHandlers[currentTool];
-          if (typeof th.onEnter === 'function') {
-            th.onEnter();
+        if (typeof window.handleGlobalConfirm === 'function') {
+          window.handleGlobalConfirm(e, true);
+        } else {
+          // Fallback if handleGlobalConfirm is not initialized yet
+          if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
+            let th = window.cadPluginHooks.toolHandlers[currentTool];
+            if (typeof th.onEnter === 'function') {
+              try { if (th.onEnter() !== false) return; } catch (err) { console.error(err); }
+            }
+          }
+          if (window.cadPluginHooks && Array.isArray(window.cadPluginHooks.enterHandlers) && window.cadPluginHooks.enterHandlers.length > 0) {
+            let handled = false;
+            for (let fn of window.cadPluginHooks.enterHandlers) {
+              try { if (fn() !== false) handled = true; } catch (err) { console.error(err); }
+            }
+            if (handled) return;
+          }
+          if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
             return;
           }
-        }
-
-        // 2. Nhấn Enter khi không gõ gì -> Lặp lại lệnh CAD trước đó
-        let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
-        if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
-          logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
-          runCommand(lastCmd);
+          let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
+          if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+            logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
+            runCommand(lastCmd);
+          }
         }
         return;
       }
@@ -218,17 +236,30 @@ if (cliInput) {
       runCommand(raw);
     } else if (e.key === ' ' && !cliInput.value.trim()) {
       e.preventDefault();
-      if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
-        let th = window.cadPluginHooks.toolHandlers[currentTool];
-        if (typeof th.onEnter === 'function') {
-          th.onEnter();
+      if (typeof window.handleGlobalConfirm === 'function') {
+        window.handleGlobalConfirm(e, true);
+      } else {
+        if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
+          let th = window.cadPluginHooks.toolHandlers[currentTool];
+          if (typeof th.onEnter === 'function') {
+            try { if (th.onEnter() !== false) return; } catch (err) { console.error(err); }
+          }
+        }
+        if (window.cadPluginHooks && Array.isArray(window.cadPluginHooks.enterHandlers) && window.cadPluginHooks.enterHandlers.length > 0) {
+          let handled = false;
+          for (let fn of window.cadPluginHooks.enterHandlers) {
+            try { if (fn() !== false) handled = true; } catch (err) { console.error(err); }
+          }
+          if (handled) return;
+        }
+        if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
           return;
         }
-      }
-      let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
-      if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
-        logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
-        runCommand(lastCmd);
+        let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
+        if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+          logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');
+          runCommand(lastCmd);
+        }
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
