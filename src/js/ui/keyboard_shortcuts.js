@@ -178,25 +178,44 @@ window.addEventListener('keydown', (e) => {
       return;
     }
 
-    // 4. Nếu đang ở Transform Tool (MOVE, COPY, ROTATE, SCALE, MIRROR)
+    // 4. Nếu đang ở Chế độ Chọn đối tượng cho Lệnh (Command Object Selection Phase)
     const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+    if (typeof activeCommandContext !== 'undefined' && activeCommandContext.phase === 'SELECT_OBJECTS') {
+      if (e) e.preventDefault();
+      if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
+        setInfo(`💡 [${currentTool}] Chưa chọn đối tượng nào. Hãy quét hoặc nhấp chọn đối tượng trước khi bấm ENTER.`);
+        return;
+      }
+
+      if (currentTool === 'ERASE') {
+        if (typeof deleteSelection === 'function') deleteSelection();
+        activeCommandContext = { cmd: null, phase: 'IDLE' };
+        return;
+      }
+      if (TRANSFORM_TOOLS.includes(currentTool)) {
+        activeCommandContext.phase = 'PICK_BASE_POINT';
+        setInfo(`👉 [${currentTool}] Bước 2/2: Đã chốt ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+        return;
+      }
+    }
+
+    // 5. Nếu đang ở Transform Tool và đã sẵn sàng Pick Base Point
     if (TRANSFORM_TOOLS.includes(currentTool)) {
       if (e) e.preventDefault();
       if (typeof selectedIds !== 'undefined' && selectedIds.size > 0 && !isDrawing) {
-        setInfo(`✅ [${currentTool}] Đã tự động bắt nhóm ${selectedIds.size} đối tượng. Nhấp giữ chuột vào vùng chọn để kéo sang vị trí mới (thả chuột để hoàn tất)!`);
+        setInfo(`👉 [${currentTool}] Bước 2/2: Hãy nhấp Điểm Gốc (Base Point) trên bản vẽ...`);
       } else if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
         setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước.`);
       }
       return;
     }
 
-    // 5. Nếu đang ở một công cụ / plugin nhưng không có onEnter riêng, không tự động re-init lại lệnh
+    // 6. Nếu đang ở một công cụ vẽ / plugin khác đang hoạt động
     if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
-      // Đang trong chế độ tool, giữ nguyên trạng thái
       return;
     }
 
-    // 5. Lặp lại lệnh gần nhất (Repeat Last Command)
+    // 7. Lặp lại lệnh gần nhất (chỉ khi đang ở chế độ rảnh SELECT và không trong Command context)
     let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
     if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
       if (e) e.preventDefault();

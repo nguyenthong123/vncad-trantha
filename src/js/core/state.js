@@ -17,8 +17,12 @@ let undoStack = [];
 let redoStack = [];
 let selectedIds = new Set();
 
-// Active Tool & Mode State
+// Active Tool & Mode State (AutoCAD Command State Machine)
 let currentTool = 'SELECT';
+let activeCommandContext = {
+  cmd: null,
+  phase: 'IDLE' // 'IDLE', 'SELECT_OBJECTS', 'PICK_BASE_POINT', 'PICK_TARGET_POINT'
+};
 let orthoMode = false;
 let isDrawing = false;
 let startPoint = null;

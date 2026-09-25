@@ -99,7 +99,9 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
   const isTransformTool = TRANSFORM_TOOLS.includes(currentTool);
   const isPluginSelection = pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection);
 
-  const isSelectionMode = (currentTool === 'SELECT') || (isTransformTool && selectedIds.size === 0) || Boolean(isPluginSelection);
+  // Điều kiện vào chế độ quét/chọn: Tool SELECT, ERASE, hoặc Transform tool đang ở bước 1/2 (SELECT_OBJECTS)
+  const isCommandSelecting = typeof activeCommandContext !== 'undefined' && (activeCommandContext.phase === 'SELECT_OBJECTS');
+  const isSelectionMode = (currentTool === 'SELECT') || (currentTool === 'ERASE') || isCommandSelecting || Boolean(isPluginSelection);
 
   if (isSelectionMode) {
     let found = typeof findClosestEntity === 'function' ? findClosestEntity(mouseDownWorld) : null;
@@ -111,8 +113,10 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
       } else {
         if (pluginTool && (pluginTool.multiSelect || typeof pluginTool.allowSelection === 'function')) {
           selectedIds.add(found.id);
-        } else if (isTransformTool) {
-          selectedIds.add(found.id);
+        } else if (isTransformTool || currentTool === 'ERASE') {
+          // Trong lệnh Move/Copy/Erase, nhấp từng đối tượng để gom nhóm
+          if (selectedIds.has(found.id)) selectedIds.delete(found.id);
+          else selectedIds.add(found.id);
         } else {
           selectedIds.clear();
           selectedIds.add(found.id);
@@ -122,7 +126,9 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
       if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
         pluginTool.onSelectionChange(selectedIds, false);
       } else if (isTransformTool) {
-        setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấp Điểm Gốc (Base Point)...`);
+        setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Tiếp tục chọn thêm hoặc bấm ENTER / SPACE để chốt chọn.`);
+      } else if (currentTool === 'ERASE') {
+        setInfo(`👉 [ERASE] Đã chọn ${selectedIds.size} đối tượng. Tiếp tục chọn thêm hoặc bấm ENTER / SPACE để xóa.`);
       } else {
         let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
         if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {

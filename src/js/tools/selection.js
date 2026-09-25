@@ -8,6 +8,28 @@ function selectTool(tool) {
   polyPoints = [];
   if (dynBox) dynBox.style.display = 'none';
 
+  const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+
+  // Cập nhật State Machine cho lệnh AutoCAD
+  if (tool === 'SELECT' || tool === 'PAN') {
+    activeCommandContext = { cmd: null, phase: 'IDLE' };
+  } else if (TRANSFORM_TOOLS.includes(tool)) {
+    if (selectedIds.size > 0) {
+      activeCommandContext = { cmd: tool, phase: 'PICK_BASE_POINT' };
+    } else {
+      activeCommandContext = { cmd: tool, phase: 'SELECT_OBJECTS' };
+    }
+  } else if (tool === 'ERASE') {
+    if (selectedIds.size > 0) {
+      deleteSelection();
+      return;
+    } else {
+      activeCommandContext = { cmd: 'ERASE', phase: 'SELECT_OBJECTS' };
+    }
+  } else {
+    activeCommandContext = { cmd: tool, phase: 'IDLE' };
+  }
+
   if (tool && tool !== 'SELECT' && tool !== 'PAN') {
     if (typeof lastExecutedCommand !== 'undefined') lastExecutedCommand = tool;
     window.lastExecutedCommand = tool;
@@ -40,9 +62,15 @@ function selectTool(tool) {
   } else if (typeof window['init' + tool + 'Tool'] === 'function') {
     try { window['init' + tool + 'Tool'](); } catch (err) { console.error(err); }
   } else if (tool === 'SELECT') {
-    setInfo("👆 Chế độ Chọn: Nhấp vào đối tượng để chọn (hoặc giữ Shift để chọn nhiều).");
+    setInfo("👆 Chế độ Chọn (SELECT): Nhấp hoặc quét khung để chọn đối tượng.");
+  } else if (TRANSFORM_TOOLS.includes(tool)) {
+    if (activeCommandContext.phase === 'PICK_BASE_POINT') {
+      setInfo(`👉 [${tool}] Bước 2/2: Đang chọn ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+    } else {
+      setInfo(`👉 [${tool}] Bước 1/2: Quét hoặc nhấp chọn các đối tượng. Bấm ENTER / SPACE khi chọn xong.`);
+    }
   } else if (tool === 'ERASE') {
-    setInfo("❌ Chế độ Xóa: Nhấp vào đối tượng muốn xóa.");
+    setInfo("❌ [ERASE] Quét hoặc nhấp chọn các đối tượng cần xóa. Bấm ENTER / SPACE để xóa.");
   } else {
     setInfo(`🛠️ Đang kích hoạt lệnh [${tool}]. Nhấp chuột trên bản vẽ để bắt đầu.`);
   }

@@ -1836,8 +1836,12 @@ let undoStack = [];
 let redoStack = [];
 let selectedIds = new Set();
 
-// Active Tool & Mode State
+// Active Tool & Mode State (AutoCAD Command State Machine)
 let currentTool = 'SELECT';
+let activeCommandContext = {
+  cmd: null,
+  phase: 'IDLE' // 'IDLE', 'SELECT_OBJECTS', 'PICK_BASE_POINT', 'PICK_TARGET_POINT'
+};
 let orthoMode = false;
 let isDrawing = false;
 let startPoint = null;
@@ -3220,6 +3224,28 @@ function selectTool(tool) {
   polyPoints = [];
   if (dynBox) dynBox.style.display = 'none';
 
+  const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+
+  // Cập nhật State Machine cho lệnh AutoCAD
+  if (tool === 'SELECT' || tool === 'PAN') {
+    activeCommandContext = { cmd: null, phase: 'IDLE' };
+  } else if (TRANSFORM_TOOLS.includes(tool)) {
+    if (selectedIds.size > 0) {
+      activeCommandContext = { cmd: tool, phase: 'PICK_BASE_POINT' };
+    } else {
+      activeCommandContext = { cmd: tool, phase: 'SELECT_OBJECTS' };
+    }
+  } else if (tool === 'ERASE') {
+    if (selectedIds.size > 0) {
+      deleteSelection();
+      return;
+    } else {
+      activeCommandContext = { cmd: 'ERASE', phase: 'SELECT_OBJECTS' };
+    }
+  } else {
+    activeCommandContext = { cmd: tool, phase: 'IDLE' };
+  }
+
   if (tool && tool !== 'SELECT' && tool !== 'PAN') {
     if (typeof lastExecutedCommand !== 'undefined') lastExecutedCommand = tool;
     window.lastExecutedCommand = tool;
@@ -3252,9 +3278,15 @@ function selectTool(tool) {
   } else if (typeof window['init' + tool + 'Tool'] === 'function') {
     try { window['init' + tool + 'Tool'](); } catch (err) { console.error(err); }
   } else if (tool === 'SELECT') {
-    setInfo("👆 Chế độ Chọn: Nhấp vào đối tượng để chọn (hoặc giữ Shift để chọn nhiều).");
+    setInfo("👆 Chế độ Chọn (SELECT): Nhấp hoặc quét khung để chọn đối tượng.");
+  } else if (TRANSFORM_TOOLS.includes(tool)) {
+    if (activeCommandContext.phase === 'PICK_BASE_POINT') {
+      setInfo(`👉 [${tool}] Bước 2/2: Đang chọn ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+    } else {
+      setInfo(`👉 [${tool}] Bước 1/2: Quét hoặc nhấp chọn các đối tượng. Bấm ENTER / SPACE khi chọn xong.`);
+    }
   } else if (tool === 'ERASE') {
-    setInfo("❌ Chế độ Xóa: Nhấp vào đối tượng muốn xóa.");
+    setInfo("❌ [ERASE] Quét hoặc nhấp chọn các đối tượng cần xóa. Bấm ENTER / SPACE để xóa.");
   } else {
     setInfo(`🛠️ Đang kích hoạt lệnh [${tool}]. Nhấp chuột trên bản vẽ để bắt đầu.`);
   }
@@ -3580,7 +3612,9 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
   const isTransformTool = TRANSFORM_TOOLS.includes(currentTool);
   const isPluginSelection = pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection);
 
-  const isSelectionMode = (currentTool === 'SELECT') || (isTransformTool && selectedIds.size === 0) || Boolean(isPluginSelection);
+  // Điều kiện vào chế độ quét/chọn: Tool SELECT, ERASE, hoặc Transform tool đang ở bước 1/2 (SELECT_OBJECTS)
+  const isCommandSelecting = typeof activeCommandContext !== 'undefined' && (activeCommandContext.phase === 'SELECT_OBJECTS');
+  const isSelectionMode = (currentTool === 'SELECT') || (currentTool === 'ERASE') || isCommandSelecting || Boolean(isPluginSelection);
 
   if (isSelectionMode) {
     let found = typeof findClosestEntity === 'function' ? findClosestEntity(mouseDownWorld) : null;
@@ -3592,8 +3626,10 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
       } else {
         if (pluginTool && (pluginTool.multiSelect || typeof pluginTool.allowSelection === 'function')) {
           selectedIds.add(found.id);
-        } else if (isTransformTool) {
-          selectedIds.add(found.id);
+        } else if (isTransformTool || currentTool === 'ERASE') {
+          // Trong lệnh Move/Copy/Erase, nhấp từng đối tượng để gom nhóm
+          if (selectedIds.has(found.id)) selectedIds.delete(found.id);
+          else selectedIds.add(found.id);
         } else {
           selectedIds.clear();
           selectedIds.add(found.id);
@@ -3603,7 +3639,9 @@ function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false,
       if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
         pluginTool.onSelectionChange(selectedIds, false);
       } else if (isTransformTool) {
-        setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấp Điểm Gốc (Base Point)...`);
+        setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Tiếp tục chọn thêm hoặc bấm ENTER / SPACE để chốt chọn.`);
+      } else if (currentTool === 'ERASE') {
+        setInfo(`👉 [ERASE] Đã chọn ${selectedIds.size} đối tượng. Tiếp tục chọn thêm hoặc bấm ENTER / SPACE để xóa.`);
       } else {
         let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
         if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
@@ -6569,25 +6607,44 @@ window.addEventListener('keydown', (e) => {
       return;
     }
 
-    // 4. Nếu đang ở Transform Tool (MOVE, COPY, ROTATE, SCALE, MIRROR)
+    // 4. Nếu đang ở Chế độ Chọn đối tượng cho Lệnh (Command Object Selection Phase)
     const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+    if (typeof activeCommandContext !== 'undefined' && activeCommandContext.phase === 'SELECT_OBJECTS') {
+      if (e) e.preventDefault();
+      if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
+        setInfo(`💡 [${currentTool}] Chưa chọn đối tượng nào. Hãy quét hoặc nhấp chọn đối tượng trước khi bấm ENTER.`);
+        return;
+      }
+
+      if (currentTool === 'ERASE') {
+        if (typeof deleteSelection === 'function') deleteSelection();
+        activeCommandContext = { cmd: null, phase: 'IDLE' };
+        return;
+      }
+      if (TRANSFORM_TOOLS.includes(currentTool)) {
+        activeCommandContext.phase = 'PICK_BASE_POINT';
+        setInfo(`👉 [${currentTool}] Bước 2/2: Đã chốt ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+        return;
+      }
+    }
+
+    // 5. Nếu đang ở Transform Tool và đã sẵn sàng Pick Base Point
     if (TRANSFORM_TOOLS.includes(currentTool)) {
       if (e) e.preventDefault();
       if (typeof selectedIds !== 'undefined' && selectedIds.size > 0 && !isDrawing) {
-        setInfo(`✅ [${currentTool}] Đã tự động bắt nhóm ${selectedIds.size} đối tượng. Nhấp giữ chuột vào vùng chọn để kéo sang vị trí mới (thả chuột để hoàn tất)!`);
+        setInfo(`👉 [${currentTool}] Bước 2/2: Hãy nhấp Điểm Gốc (Base Point) trên bản vẽ...`);
       } else if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
         setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước.`);
       }
       return;
     }
 
-    // 5. Nếu đang ở một công cụ / plugin nhưng không có onEnter riêng, không tự động re-init lại lệnh
+    // 6. Nếu đang ở một công cụ vẽ / plugin khác đang hoạt động
     if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
-      // Đang trong chế độ tool, giữ nguyên trạng thái
       return;
     }
 
-    // 5. Lặp lại lệnh gần nhất (Repeat Last Command)
+    // 7. Lặp lại lệnh gần nhất (chỉ khi đang ở chế độ rảnh SELECT và không trong Command context)
     let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
     if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
       if (e) e.preventDefault();
