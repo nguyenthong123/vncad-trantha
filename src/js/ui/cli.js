@@ -218,6 +218,13 @@ if (cliInput) {
       runCommand(raw);
     } else if (e.key === ' ' && !cliInput.value.trim()) {
       e.preventDefault();
+      if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
+        let th = window.cadPluginHooks.toolHandlers[currentTool];
+        if (typeof th.onEnter === 'function') {
+          th.onEnter();
+          return;
+        }
+      }
       let lastCmd = window.lastExecutedCommand || lastExecutedCommand;
       if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
         logToCliHistory(`Lặp lại lệnh trước: ${lastCmd}`, 'prompt');

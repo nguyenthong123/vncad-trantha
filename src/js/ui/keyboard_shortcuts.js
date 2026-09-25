@@ -123,9 +123,17 @@ window.addEventListener('keydown', (e) => {
     }
   }
 
-  // Phím Delete / Backspace: Xóa các đối tượng đang chọn
+  // Phím Delete / Backspace: Xóa các đối tượng đang chọn hoặc gọi hook onDelete của plugin
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (document.activeElement !== cliInput && document.activeElement !== dynInput && (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'))) {
+      if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
+        let th = window.cadPluginHooks.toolHandlers[currentTool];
+        if (typeof th.onDelete === 'function') {
+          e.preventDefault();
+          th.onDelete();
+          return;
+        }
+      }
       if (typeof selectedIds !== 'undefined' && selectedIds.size > 0) {
         e.preventDefault();
         if (typeof deleteSelection === 'function') deleteSelection();
