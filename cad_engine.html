@@ -2,7 +2,9 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>VinaCAD Professional Web Studio</title>
 <!-- STYLES -->
 
@@ -28,6 +30,8 @@ html, body {
   background: #070a13;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
   color: #f1f5f9;
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 #app {
@@ -45,6 +49,7 @@ html, body {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  touch-action: none;
 }
 
 /* VIEWPORT & CANVAS */
@@ -56,12 +61,17 @@ html, body {
   cursor: crosshair;
   min-width: 0;
   min-height: 0;
+  touch-action: none !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 canvas {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none !important;
 }
 
 /* HUD OVERLAYS */
@@ -289,6 +299,8 @@ canvas {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .brand {
@@ -378,6 +390,44 @@ canvas {
   background: #854d0e;
   border-color: #eab308;
   color: #fff;
+}
+
+.btn-save {
+  background: #047857;
+  border-color: #10b981;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.btn-save:hover {
+  background: #059669;
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.7);
+}
+
+.btn-save.saved-pulse {
+  animation: save-success-pulse 1.2s ease !important;
+}
+
+@keyframes save-success-pulse {
+  0% {
+    transform: scale(1);
+    background: #047857;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.9);
+  }
+  40% {
+    transform: scale(1.15);
+    background: #10b981;
+    border-color: #6ee7b7;
+    box-shadow: 0 0 20px 6px rgba(52, 211, 153, 0.95);
+  }
+  100% {
+    transform: scale(1);
+    background: #047857;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
 }
 
 .ribbon-swatch {
@@ -918,13 +968,15 @@ canvas {
 
     <!-- GROUP 4: TIỆN ÍCH, APPLOAD & FILE -->
     <div class="btn-group" id="plugin-ribbon-group">
+      <button class="btn btn-save" id="btn-QUICKSAVE" onclick="quickSaveProject(true)" title="Lưu bản vẽ & tiến trình hiện tại vào CSDL (Phím tắt: Ctrl+S / Cmd+S hoặc gõ QSAVE)">💾 Lưu (Ctrl+S)</button>
       <button class="btn btn-accent" id="btn-NEW" onclick="createNewDrawing(true)" title="Tạo bản vẽ mới sạch sẽ (Phím tắt: Ctrl+N / Cmd+N hoặc gõ lệnh NEW)">📄 Mới (Ctrl+N)</button>
       <button class="btn btn-highlight" id="btn-APPLOAD" onclick="openApploadModal()" title="Quản lý và Nạp file Tool / AutoLISP mở rộng">🧩 Nạp Tool (APPLOAD) <span id="tool-count-badge" style="background:#ef4444; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; margin-left:2px;">0</span></button>
-      <button class="btn btn-accent" id="btn-OPEN" onclick="openFilePicker()">📂 Mở File (OPEN)</button>
-      <button class="btn btn-accent" id="btn-SAVE" onclick="saveJSON()">💾 Lưu JSON</button>
-      <button class="btn btn-accent" id="btn-DXF" onclick="exportDXF()">📥 Xuất DXF</button>
+      <button class="btn btn-accent" id="btn-OPEN" onclick="event.stopPropagation(); openFilePicker()" title="Mở file bản vẽ (JSON, DXF) hoặc nạp Tool (LSP, JS) từ máy tính (Phím tắt: Ctrl+O / Cmd+O hoặc gõ lệnh OPEN)">📂 Mở File (Ctrl+O)</button>
+      <button class="btn btn-accent" id="btn-SAVE" onclick="saveJSON()" title="Xuất toàn bộ bản vẽ thành file JSON">📤 Xuất JSON</button>
+      <button class="btn btn-accent" id="btn-DXF" onclick="exportDXF()" title="Xuất toàn bộ bản vẽ thành file DXF AutoCAD">📥 Xuất DXF</button>
       <button class="btn btn-ortho" id="btn-ORTHO" onclick="toggleOrtho()">📐 ORTHO (F8): <span id="ortho-status">OFF</span></button>
       <button class="btn" id="btn-DIST" onclick="selectTool('DIST')">📏 Đo (DI)</button>
+      <button class="btn" id="btn-ID" onclick="selectTool('ID')" title="Soi Tọa Độ WCS, kiểm tra vị trí Ô Trần 600x600 & Vật thể (Lệnh ID / CHECK)">🎯 Soi Tọa Độ (ID)</button>
       <button class="btn" id="btn-PAN" onclick="selectTool('PAN')">✋ Pan (P)</button>
       <button class="btn" id="btn-ZOOM" onclick="zoomAll()">🔍 Zoom All (Z)</button>
       <button class="btn" id="btn-TOP" onclick="setViewRotation(0)" title="Đưa góc nhìn về TOP (0 độ) chuẩn mặt bằng">⬆️ Top (0°)</button>
@@ -937,7 +989,7 @@ canvas {
   </div>
 
   <!-- HIDDEN FILE UPLOADER FOR OPEN/IMPORT -->
-  <input type="file" id="cad-file-input" accept=".json,.dxf,.txt" style="display:none" onchange="handleFileInput(event)" />
+  <input type="file" id="cad-file-input" accept=".json,.dxf,.lsp,.js,.py,.txt" style="display:none" onchange="handleFileInput(event)" />
 
   <!-- APPLOAD MODAL DIALOG (BẢNG QUẢN LÝ & NẠP NHIỀU TOOL AUTOLISP / PLUGINS) -->
   <div id="appload-modal">
@@ -988,14 +1040,11 @@ canvas {
 
         <!-- Add Custom Script Panel -->
         <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px;">
-          <div style="font-weight:700; color:#fbbf24; font-size:12.5px; margin-bottom:8px;">⚡ Thêm Script AutoLISP / Plugin JavaScript Tùy Chỉnh:</div>
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <input id="new-tool-name" type="text" placeholder="Tên Tool (ví dụ: Tool Bóc Tách Tường, Chia Ô...)" style="flex:1; background:#0f172a; border:1px solid #334155; color:#f8fafc; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
-            <input id="new-tool-cmd" type="text" placeholder="Lệnh CLI (vd: MYTOOL, WALL, CUT)" style="width:180px; background:#0f172a; border:1px solid #334155; color:#38bdf8; font-family:monospace; font-weight:bold; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
-          </div>
-          <textarea id="new-tool-code" placeholder="Dán nội dung mã AutoLISP hoặc JavaScript vào đây..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; color:#4ade80; font-family:monospace; font-size:11.5px; padding:8px 10px; border-radius:4px; outline:none; resize:vertical;"></textarea>
-          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
-            <button onclick="registerCustomTool()" class="btn btn-highlight" style="padding:6px 16px;">⚡ Nạp & Lưu Tool Vào Hệ Thống</button>
+          <div style="font-weight:700; color:#fbbf24; font-size:12.5px; margin-bottom:8px;">⚡ Dán Mã AutoLISP (.lsp) / Plugin JavaScript (.js) (Tự động nhận diện lệnh & tên):</div>
+          <textarea id="new-tool-code" placeholder="Dán trực tiếp nội dung mã AutoLISP (defun c:...) hoặc JavaScript vào đây (Hệ thống sẽ tự động trích xuất mọi lệnh và tên tool mà không cần nhập tay)..." rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; color:#4ade80; font-family:monospace; font-size:11.5px; padding:8px 10px; border-radius:4px; outline:none; resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px;">
+            <span style="font-size:11px; color:#94a3b8;">✨ Tự động nhận diện các hàm `defun c:TÊN_LỆNH`, `registerCommand`, `selectTool`</span>
+            <button onclick="registerCustomTool()" class="btn btn-highlight" style="padding:6px 18px; font-size:12px;">⚡ Nạp & Thực Thi Tool Ngay</button>
           </div>
         </div>
       </div>
@@ -1050,7 +1099,7 @@ canvas {
 // === js/core/db.js ===
 // ===============================================================================
 //           VINACAD DATABASE ENGINE (INDEXEDDB PERSISTENCE LAYER)
-//   Real-Time Auto-Save • Zero Data Loss • Project Storage • Fast Restoration
+//   Real-Time Auto-Save • Zero Data Loss • Manual Quick Save • Fast Restoration
 //   Persistent Command Transaction Logging & Priority State Journal
 // ===============================================================================
 
@@ -1065,6 +1114,8 @@ const STORE_PLUGINS = 'custom_plugins';
 let dbInstance = null;
 let isDbReady = false;
 let autoSaveTimer = null;
+let autoSaveDaemonInterval = null;
+let lastSavedSignature = '';
 let currentProject = {
   id: 'default_project',
   name: 'Bản vẽ Hiện tại',
@@ -1152,6 +1203,7 @@ function initVinaCAD_DB(callback) {
   if (!window.indexedDB) {
     console.warn("⚠️ Trình duyệt không hỗ trợ IndexedDB. Sử dụng LocalStorage dự phòng.");
     initLocalStorageFallback();
+    startAutoSaveDaemon();
     if (callback) callback();
     return;
   }
@@ -1202,40 +1254,68 @@ function initVinaCAD_DB(callback) {
     if (typeof restorePluginsFromDB === 'function') {
       restorePluginsFromDB();
     }
+
+    // Khởi động tiến trình tự động lưu ngầm định kỳ
+    startAutoSaveDaemon();
   };
 
   request.onerror = function(event) {
     console.error("❌ Lỗi mở IndexedDB:", event.target.error);
     initLocalStorageFallback();
+    startAutoSaveDaemon();
     if (callback) callback();
   };
 }
 
-// 2. Tự Động Lưu (Real-Time Debounced Auto-Save)
-function autoSaveToDB(immediate = false) {
-  updateDbStatusUI('saving', '⏳ CSDL: Đang lưu...');
+/**
+ * Tạo chữ ký (signature) nhận diện trạng thái bản vẽ để phát hiện thay đổi
+ */
+function getDrawingSignature() {
+  const entCount = typeof entities !== 'undefined' ? entities.length : 0;
+  const undoCount = typeof undoStack !== 'undefined' ? undoStack.length : 0;
+  const lastEntId = entCount > 0 ? (entities[entCount - 1].id || '') : '';
+  const camStr = `${Math.round((typeof zoom !== 'undefined' ? zoom : 1) * 1000)}_${Math.round(typeof panX !== 'undefined' ? panX : 0)}_${Math.round(typeof panY !== 'undefined' ? panY : 0)}`;
+  return `${entCount}_${undoCount}_${lastEntId}_${camStr}`;
+}
 
+// 2. Tự Động Lưu (Real-Time Debounced & Periodic Background Auto-Save)
+function autoSaveToDB(immediate = false, isManual = false) {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
   }
 
   const performSave = () => {
+    const currentSig = getDrawingSignature();
+    const timeStr = new Date().toLocaleTimeString('vi-VN');
+
+    // Lưu tối đa 30 bước undo gần nhất để giảm dung lượng nhưng vẫn bảo toàn lịch sử
+    const compactUndo = typeof undoStack !== 'undefined' ? undoStack.slice(-30) : [];
+    const compactRedo = typeof redoStack !== 'undefined' ? redoStack.slice(-30) : [];
+
     const drawingPayload = {
       id: 'current_active_canvas',
       projectId: currentProject.id,
       projectName: currentProject.name,
-      entities: entities,
-      activeProperties: activeProperties,
+      entities: typeof entities !== 'undefined' ? entities : [],
+      undoStack: compactUndo,
+      redoStack: compactRedo,
+      activeProperties: typeof activeProperties !== 'undefined' ? activeProperties : {},
+      orthoMode: typeof orthoMode !== 'undefined' ? orthoMode : false,
       activeTaskContext: window.activeTaskContext,
       camera: {
-        zoom: zoom,
-        panX: panX,
-        panY: panY,
-        viewRotation: viewRotation
+        zoom: typeof zoom !== 'undefined' ? zoom : 0.08,
+        panX: typeof panX !== 'undefined' ? panX : 0,
+        panY: typeof panY !== 'undefined' ? panY : 0,
+        viewRotation: typeof viewRotation !== 'undefined' ? viewRotation : 0
       },
-      entityCount: entities.length,
+      lastExecutedCommand: window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null),
+      entityCount: typeof entities !== 'undefined' ? entities.length : 0,
+      saveType: isManual ? 'MANUAL' : 'AUTO',
       updatedAt: Date.now()
     };
+
+    lastSavedSignature = currentSig;
 
     if (isDbReady && dbInstance) {
       try {
@@ -1244,11 +1324,16 @@ function autoSaveToDB(immediate = false) {
         const req = store.put(drawingPayload);
 
         req.onsuccess = function() {
-          updateDbStatusUI('saved', `🟢 CSDL: Đã lưu (${entities.length} nét)`);
+          const count = drawingPayload.entityCount;
+          if (isManual) {
+            updateDbStatusUI('saved', `🟢 Đã lưu lúc ${timeStr} (${count} nét)`);
+          } else {
+            updateDbStatusUI('saved', `🟢 Tự động lưu lúc ${timeStr} (${count} nét)`);
+          }
         };
 
         req.onerror = function(e) {
-          console.warn("⚠️ Lỗi ghi IndexedDB, lưu sang LocalStorage:", e);
+          console.warn("⚠️ Lỗi ghi IndexedDB, chuyển sang LocalStorage:", e);
           saveToLocalStorageFallback(drawingPayload);
         };
       } catch (err) {
@@ -1262,11 +1347,101 @@ function autoSaveToDB(immediate = false) {
   if (immediate) {
     performSave();
   } else {
+    updateDbStatusUI('saving', '⏳ CSDL: Đang lưu...');
     autoSaveTimer = setTimeout(performSave, 250); // Debounce 250ms
   }
 }
 
-// 3. Phục Hồi Bản Vẽ Từ Cơ Sở Dữ Liệu
+/**
+ * ⚡ NÚT LƯU NHANH THỦ CÔNG (Manual Quick Save - QSAVE / Ctrl+S)
+ * Đảm bảo 100% bản vẽ, tiến trình hiện tại và snapshot được lưu ngay lập tức
+ */
+function quickSaveProject(manual = true) {
+  // 1. Thực hiện lưu khẩn cấp tức thì vào CSDL Active
+  autoSaveToDB(true, manual);
+
+  const timeStr = new Date().toLocaleTimeString('vi-VN');
+  const count = typeof entities !== 'undefined' ? entities.length : 0;
+
+  // 2. Lưu thêm 1 Snapshot vào lịch sử CSDL
+  if (isDbReady && dbInstance && count > 0) {
+    try {
+      const snapPayload = {
+        timestamp: Date.now(),
+        timeStr: timeStr,
+        projectName: currentProject.name,
+        entityCount: count,
+        entities: JSON.parse(JSON.stringify(entities)),
+        camera: { zoom, panX, panY, viewRotation }
+      };
+      const tx = dbInstance.transaction([STORE_SNAPSHOTS], 'readwrite');
+      tx.objectStore(STORE_SNAPSHOTS).put(snapPayload);
+    } catch (e) {}
+  }
+
+  // 3. Hiệu ứng Visual Feedback trên nút Ribbon
+  const saveBtn = document.getElementById('btn-QUICKSAVE');
+  if (saveBtn) {
+    saveBtn.classList.remove('saved-pulse');
+    void saveBtn.offsetWidth; // Trigger reflow
+    saveBtn.classList.add('saved-pulse');
+    const oldText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '✅ Đã lưu!';
+    setTimeout(() => {
+      saveBtn.innerHTML = oldText;
+      saveBtn.classList.remove('saved-pulse');
+    }, 1500);
+  }
+
+  // 4. Cập nhật HUD & CLI Thông báo
+  updateDbStatusUI('saved', `🟢 Đã lưu lúc ${timeStr} (${count} nét)`);
+  if (typeof setInfo === 'function') {
+    setInfo(`💾 Đã lưu thành công bản vẽ "${currentProject.name}" (${count} đối tượng) vào CSDL an toàn!`, 'success');
+  }
+  if (typeof logToCliHistory === 'function') {
+    logToCliHistory(`[QSAVE] ${timeStr}: Đã lưu an toàn ${count} đối tượng & tiến trình làm việc vào CSDL.`, 'success');
+  }
+
+  return true;
+}
+
+window.quickSaveProject = quickSaveProject;
+window.autoSaveToDB = autoSaveToDB;
+
+/**
+ * 🔄 TIẾN TRÌNH TỰ ĐỘNG LƯU ĐỊNH KỲ (Background Auto-Save Daemon)
+ * Tự động chạy lưu ngầm mỗi 3 giây nếu người dùng không bấm nút lưu
+ */
+function startAutoSaveDaemon() {
+  if (autoSaveDaemonInterval) clearInterval(autoSaveDaemonInterval);
+
+  autoSaveDaemonInterval = setInterval(() => {
+    const currentSig = getDrawingSignature();
+    // Nếu có sự thay đổi chưa được ghi vào CSDL thì tự động lưu ngay
+    if (currentSig !== lastSavedSignature) {
+      autoSaveToDB(false, false);
+    }
+  }, 3000); // 3 giây kiểm tra và lưu ngầm 1 lần
+}
+
+// Bắt các sự kiện đóng tab, ẩn tab, chuyển cửa sổ để lưu tức thì chống mất dữ liệu
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    autoSaveToDB(true, false);
+  });
+  window.addEventListener('pagehide', () => {
+    autoSaveToDB(true, false);
+  });
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        autoSaveToDB(true, false);
+      }
+    });
+  }
+}
+
+// 3. Phục Hồi Bản Vẽ Từ Cơ Sở Dữ Liệu Khi Khởi Động
 function restoreActiveCanvasFromDB(callback) {
   if (isDbReady && dbInstance) {
     try {
@@ -1275,21 +1450,39 @@ function restoreActiveCanvasFromDB(callback) {
       const req = store.get('current_active_canvas');
 
       req.onsuccess = function() {
-        if (req.result && req.result.entities && req.result.entities.length > 0) {
-          entities = req.result.entities;
-          if (req.result.activeProperties) activeProperties = { ...activeProperties, ...req.result.activeProperties };
-          if (req.result.activeTaskContext) window.activeTaskContext = req.result.activeTaskContext;
-          if (req.result.camera) {
-            zoom = req.result.camera.zoom || zoom;
-            panX = req.result.camera.panX || panX;
-            panY = req.result.camera.panY || panY;
-            if (Number.isFinite(req.result.camera.viewRotation)) viewRotation = req.result.camera.viewRotation;
+        const res = req.result;
+        if (res && res.entities && res.entities.length > 0) {
+          entities = res.entities;
+          if (Array.isArray(res.undoStack) && res.undoStack.length > 0) undoStack = res.undoStack;
+          if (Array.isArray(res.redoStack)) redoStack = res.redoStack;
+          if (res.activeProperties) activeProperties = { ...activeProperties, ...res.activeProperties };
+          if (typeof res.orthoMode === 'boolean') {
+            orthoMode = res.orthoMode;
+            const orthoBtn = document.getElementById('btn-ORTHO');
+            const orthoStatus = document.getElementById('ortho-status');
+            if (orthoBtn) orthoBtn.classList.toggle('active', orthoMode);
+            if (orthoStatus) orthoStatus.innerText = orthoMode ? 'ON' : 'OFF';
           }
-          if (req.result.projectName) currentProject.name = req.result.projectName;
+          if (res.activeTaskContext) window.activeTaskContext = res.activeTaskContext;
+          if (res.camera) {
+            zoom = res.camera.zoom || zoom;
+            panX = res.camera.panX || panX;
+            panY = res.camera.panY || panY;
+            if (Number.isFinite(res.camera.viewRotation)) viewRotation = res.camera.viewRotation;
+          }
+          if (res.projectName) currentProject.name = res.projectName;
+          if (res.lastExecutedCommand) {
+            window.lastExecutedCommand = res.lastExecutedCommand;
+            lastExecutedCommand = res.lastExecutedCommand;
+          }
 
-          console.log(`✨ Đã phục hồi ${entities.length} đối tượng từ CSDL.`);
-          updateDbStatusUI('saved', `🟢 CSDL: Đã nạp (${entities.length} nét)`);
-          setInfo(`✨ CSDL: Đã tự động phục hồi bản vẽ "${currentProject.name}" (${entities.length} đối tượng).`);
+          lastSavedSignature = getDrawingSignature();
+          console.log(`✨ Đã phục hồi ${entities.length} đối tượng & tiến trình từ CSDL.`);
+          const savedTime = res.updatedAt ? new Date(res.updatedAt).toLocaleTimeString('vi-VN') : '';
+          updateDbStatusUI('saved', `🟢 CSDL: Đã nạp (${entities.length} nét${savedTime ? ' - ' + savedTime : ''})`);
+          if (typeof setInfo === 'function') {
+            setInfo(`✨ CSDL: Đã tự động phục hồi bản vẽ "${currentProject.name}" (${entities.length} đối tượng).`);
+          }
         } else {
           // Thử nạp từ LocalStorage fallback
           restoreFromLocalStorageFallback();
@@ -1327,7 +1520,10 @@ function saveProjectAsNewToDB(projectName) {
     id: projectId,
     name: projectName,
     entities: entities,
+    undoStack: typeof undoStack !== 'undefined' ? undoStack.slice(-30) : [],
+    redoStack: typeof redoStack !== 'undefined' ? redoStack.slice(-30) : [],
     activeProperties: activeProperties,
+    orthoMode: orthoMode,
     camera: { zoom, panX, panY, viewRotation },
     entityCount: entities.length,
     createdAt: Date.now(),
@@ -1380,7 +1576,10 @@ function loadProjectByIdFromDB(projectId) {
     if (p && p.entities) {
       saveState();
       entities = p.entities;
+      if (Array.isArray(p.undoStack)) undoStack = p.undoStack;
+      if (Array.isArray(p.redoStack)) redoStack = p.redoStack;
       if (p.activeProperties) activeProperties = { ...activeProperties, ...p.activeProperties };
+      if (typeof p.orthoMode === 'boolean') orthoMode = p.orthoMode;
       if (p.camera) {
         zoom = p.camera.zoom || zoom;
         panX = p.camera.panX || panX;
@@ -1389,7 +1588,7 @@ function loadProjectByIdFromDB(projectId) {
       }
       currentProject = { id: p.id, name: p.name, createdAt: p.createdAt };
       selectedIds.clear();
-      autoSaveToDB(true);
+      quickSaveProject(true);
       if (typeof zoomAll === 'function') zoomAll();
       setInfo(`📂 Đã mở dự án "${p.name}" từ CSDL (${p.entities.length} đối tượng).`);
     }
@@ -1404,7 +1603,8 @@ function initLocalStorageFallback() {
 function saveToLocalStorageFallback(payload) {
   try {
     localStorage.setItem('vinacad_active_canvas', JSON.stringify(payload));
-    updateDbStatusUI('saved', `🟢 CSDL Local: Đã lưu (${entities.length} nét)`);
+    const timeStr = new Date().toLocaleTimeString('vi-VN');
+    updateDbStatusUI('saved', `🟢 CSDL Local: Đã lưu (${entities.length} nét - ${timeStr})`);
   } catch (e) {
     updateDbStatusUI('error', '⚠️ Bộ nhớ đầy');
   }
@@ -1417,7 +1617,10 @@ function restoreFromLocalStorageFallback() {
       const data = JSON.parse(raw);
       if (data && data.entities && data.entities.length > 0) {
         entities = data.entities;
+        if (Array.isArray(data.undoStack)) undoStack = data.undoStack;
+        if (Array.isArray(data.redoStack)) redoStack = data.redoStack;
         if (data.activeProperties) activeProperties = { ...activeProperties, ...data.activeProperties };
+        if (typeof data.orthoMode === 'boolean') orthoMode = data.orthoMode;
         if (data.camera) {
           zoom = data.camera.zoom || zoom;
           panX = data.camera.panX || panX;
@@ -1425,6 +1628,7 @@ function restoreFromLocalStorageFallback() {
           if (Number.isFinite(data.camera.viewRotation)) viewRotation = data.camera.viewRotation;
         }
         if (data.projectName) currentProject.name = data.projectName;
+        lastSavedSignature = getDrawingSignature();
         updateDbStatusUI('saved', `🟢 CSDL Local: Đã nạp (${entities.length} nét)`);
       }
     }
@@ -1526,6 +1730,9 @@ let boxStartWorld = { x: 0, y: 0 };
 let isMouseDown = false;
 let mouseDownScreen = { x: 0, y: 0 };
 let mouseDownWorld = { x: 0, y: 0 };
+let isDragMoving = false;
+let dragStartScreen = { x: 0, y: 0 };
+let activeSnapPoint = null; // High-precision OSNAP point ({ x, y, type, desc, entityId })
 
 // Basic State Functions
 function setInfo(msg, type = 'info') {
@@ -1540,8 +1747,20 @@ function saveState() {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  undoStack.push(JSON.stringify(snapshot));
-  if (undoStack.length > 50) undoStack.shift();
+  const serialized = JSON.stringify(snapshot);
+
+  // Tránh lưu các snapshot trùng lặp nếu chưa có sự thay đổi hình học thực sự
+  if (undoStack.length > 0) {
+    try {
+      const topState = JSON.parse(undoStack[undoStack.length - 1]);
+      if (topState && JSON.stringify(topState.entities) === JSON.stringify(snapshot.entities)) {
+        return;
+      }
+    } catch (e) {}
+  }
+
+  undoStack.push(serialized);
+  if (undoStack.length > 150) undoStack.shift();
   redoStack = [];
 
   // Tự động lưu ngay lập tức vào Cơ Sở Dữ Liệu IndexedDB
@@ -1552,40 +1771,58 @@ function saveState() {
 
 function undoAction() {
   if (undoStack.length === 0) {
-    setInfo("⚠️ Không còn thao tác nào để Undo.");
+    setInfo("⚠️ Không còn thao tác nào để Undo (đang ở bước đầu tiên).");
     return;
   }
+
   const currentSnapshot = {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  redoStack.push(JSON.stringify(currentSnapshot));
+  const currentEntitiesStr = JSON.stringify(entities);
 
-  let raw = undoStack.pop();
-  try {
-    let state = JSON.parse(raw);
-    if (Array.isArray(state)) {
-      entities = state;
-    } else if (state && state.entities) {
-      entities = state.entities;
-      if (state.camera) {
-        zoom = state.camera.zoom ?? zoom;
-        panX = state.camera.panX ?? panX;
-        panY = state.camera.panY ?? panY;
-        if (Number.isFinite(state.camera.viewRotation)) {
-          viewRotation = state.camera.viewRotation;
-        }
+  let state = null;
+  // Lùi từng bước và bỏ qua các snapshot trùng lặp để đảm bảo mỗi lần Undo lùi đúng 1 bước thay đổi
+  while (undoStack.length > 0) {
+    let raw = undoStack.pop();
+    try {
+      let parsed = JSON.parse(raw);
+      let targetEntities = Array.isArray(parsed) ? parsed : (parsed && parsed.entities ? parsed.entities : null);
+      if (targetEntities && JSON.stringify(targetEntities) !== currentEntitiesStr) {
+        state = parsed;
+        break;
+      }
+    } catch (e) {
+      console.error("Lỗi parse undo snapshot:", e);
+    }
+  }
+
+  if (!state) {
+    setInfo("⚠️ Không còn thao tác trước đó để Undo.");
+    return;
+  }
+
+  redoStack.push(JSON.stringify(currentSnapshot));
+  if (redoStack.length > 150) redoStack.shift();
+
+  if (Array.isArray(state)) {
+    entities = state;
+  } else if (state && state.entities) {
+    entities = state.entities;
+    if (state.camera) {
+      zoom = state.camera.zoom ?? zoom;
+      panX = state.camera.panX ?? panX;
+      panY = state.camera.panY ?? panY;
+      if (Number.isFinite(state.camera.viewRotation)) {
+        viewRotation = state.camera.viewRotation;
       }
     }
-  } catch (e) {
-    console.error("Lỗi undo:", e);
   }
 
   selectedIds.clear();
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
-  if (typeof logCommandTransaction === 'function') logCommandTransaction('UNDO', 'EXECUTED');
-  setInfo("↩️ Đã hoàn tác (Undo) thao tác trước.");
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+  setInfo(`↩️ Đã hoàn tác (Undo) 1 bước (${entities.length} đối tượng, còn ${undoStack.length} bước).`);
 }
 
 function redoAction() {
@@ -1593,38 +1830,59 @@ function redoAction() {
     setInfo("⚠️ Không còn thao tác nào để Redo.");
     return;
   }
+
   const currentSnapshot = {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  undoStack.push(JSON.stringify(currentSnapshot));
+  const currentEntitiesStr = JSON.stringify(entities);
 
-  let raw = redoStack.pop();
-  try {
-    let state = JSON.parse(raw);
-    if (Array.isArray(state)) {
-      entities = state;
-    } else if (state && state.entities) {
-      entities = state.entities;
-      if (state.camera) {
-        zoom = state.camera.zoom ?? zoom;
-        panX = state.camera.panX ?? panX;
-        panY = state.camera.panY ?? panY;
-        if (Number.isFinite(state.camera.viewRotation)) {
-          viewRotation = state.camera.viewRotation;
-        }
+  let state = null;
+  while (redoStack.length > 0) {
+    let raw = redoStack.pop();
+    try {
+      let parsed = JSON.parse(raw);
+      let targetEntities = Array.isArray(parsed) ? parsed : (parsed && parsed.entities ? parsed.entities : null);
+      if (targetEntities && JSON.stringify(targetEntities) !== currentEntitiesStr) {
+        state = parsed;
+        break;
+      }
+    } catch (e) {
+      console.error("Lỗi parse redo snapshot:", e);
+    }
+  }
+
+  if (!state) {
+    setInfo("⚠️ Không còn thao tác để Redo.");
+    return;
+  }
+
+  undoStack.push(JSON.stringify(currentSnapshot));
+  if (undoStack.length > 150) undoStack.shift();
+
+  if (Array.isArray(state)) {
+    entities = state;
+  } else if (state && state.entities) {
+    entities = state.entities;
+    if (state.camera) {
+      zoom = state.camera.zoom ?? zoom;
+      panX = state.camera.panX ?? panX;
+      panY = state.camera.panY ?? panY;
+      if (Number.isFinite(state.camera.viewRotation)) {
+        viewRotation = state.camera.viewRotation;
       }
     }
-  } catch (e) {
-    console.error("Lỗi redo:", e);
   }
 
   selectedIds.clear();
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
-  if (typeof logCommandTransaction === 'function') logCommandTransaction('REDO', 'EXECUTED');
-  setInfo("↪️ Đã làm lại (Redo) thao tác.");
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+  setInfo(`↪️ Đã làm lại (Redo) 1 bước (${entities.length} đối tượng, còn ${redoStack.length} bước).`);
 }
+
+window.saveState = saveState;
+window.undoAction = undoAction;
+window.redoAction = redoAction;
 
 function toggleOrtho() {
   orthoMode = !orthoMode;
@@ -1715,38 +1973,231 @@ function mirrorPointOverLine(pt, lp1, lp2) {
 }
 
 // === js/core/osnap.js ===
-// AUTOCAD OSNAP ENGINE & HIT TESTING
-function findSnapPoint(wPt) {
-  const snapThresholdWorld = 24 / zoom;
-  let nearest = null;
-  let minD = snapThresholdWorld;
+// ===============================================================================
+//     HIGH-PRECISION AUTOCAD OSNAP ENGINE, SPATIAL PRUNING & HIT TESTING
+//     Hỗ trợ bắt điểm chuẩn xác: Endpoint, Midpoint, Center, Intersection,
+//     Quadrant, Perpendicular, Nearest và Tối ưu hóa bản vẽ nhiều chi tiết lớn
+// ===============================================================================
 
-  for (let e of entities) {
-    if (e.layer === 'BOM_TABLE') continue;
-    let points = [];
-    if (e.type === 'LINE' || e.type === 'DIMENSION') {
-      if (e.p1 && e.p2) points.push(e.p1, e.p2, [(e.p1[0] + e.p2[0]) / 2, (e.p1[1] + e.p2[1]) / 2]);
-    } else if (e.type === 'RECTANGLE') {
-      points.push([e.x, e.y], [e.x + e.w, e.y], [e.x + e.w, e.y + e.h], [e.x, e.y + e.h], [e.x + e.w / 2, e.y + e.h / 2]);
-    } else if (e.type === 'CIRCLE' || e.type === 'ELLIPSE' || e.type === 'POLYGON') {
-      points.push([e.cx, e.cy]);
-    } else if (e.type === 'POLYLINE' && e.points) {
-      e.points.forEach(p => points.push(p));
+// Helper: Phép tính giao điểm chính xác giữa 2 đoạn thẳng
+function getSegmentIntersection(p1, p2, p3, p4) {
+  const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+  const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y;
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denom) < 1e-8) return null;
+
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+  if (t >= -0.001 && t <= 1.001 && u >= -0.001 && u <= 1.001) {
+    const clampT = Math.max(0, Math.min(1, t));
+    return {
+      x: x1 + clampT * (x2 - x1),
+      y: y1 + clampT * (y2 - y1)
+    };
+  }
+  return null;
+}
+
+// Trích xuất các đoạn thẳng (segments) từ 1 đối tượng để tính giao điểm và bắt điểm
+function extractEntitySegments(e) {
+  const segs = [];
+  if (!e) return segs;
+
+  if ((e.type === 'LINE' || e.type === 'DIMENSION') && e.p1 && e.p2) {
+    segs.push({ p1: { x: e.p1[0], y: e.p1[1] }, p2: { x: e.p2[0], y: e.p2[1] }, entity: e });
+  } else if (e.type === 'RECTANGLE' && e.x !== undefined && e.w !== undefined) {
+    const p1 = { x: e.x, y: e.y }, p2 = { x: e.x + e.w, y: e.y };
+    const p3 = { x: e.x + e.w, y: e.y + e.h }, p4 = { x: e.x, y: e.y + e.h };
+    segs.push({ p1, p2, entity: e }, { p1: p2, p2: p3, entity: e }, { p1: p3, p2: p4, entity: e }, { p1: p4, p2: p1, entity: e });
+  } else if ((e.type === 'POLYLINE' || e.type === 'POLYGON') && (e.points || e.pts)) {
+    const pts = (e.points || e.pts).map(p => ({ x: p[0] !== undefined ? p[0] : p.x, y: p[1] !== undefined ? p[1] : p.y }));
+    for (let i = 0; i < pts.length - 1; i++) {
+      segs.push({ p1: pts[i], p2: pts[i + 1], entity: e });
     }
+    if (e.closed || e.type === 'POLYGON') {
+      if (pts.length > 2) segs.push({ p1: pts[pts.length - 1], p2: pts[0], entity: e });
+    }
+  }
+  return segs;
+}
 
-    for (let pt of points) {
-      if (pt && isFinite(pt[0]) && isFinite(pt[1])) {
-        let d = Math.hypot(pt[0] - wPt.x, pt[1] - wPt.y);
-        if (d < minD) {
-          minD = d;
-          nearest = { x: pt[0], y: pt[1] };
+// Bắt điểm thông minh đa điểm chuẩn xác (OSNAP Multi-Candidate Engine)
+function findSnapPoint(wPt, customAperturePx = null) {
+  const aperturePx = customAperturePx || (typeof touchState !== 'undefined' && touchState && touchState.active ? 34 : 22);
+  const snapThresholdWorld = aperturePx / zoom;
+  const candidates = [];
+
+  // Bounding box quét nhanh khu vực trỏ chuột
+  const qMinX = wPt.x - snapThresholdWorld * 1.5;
+  const qMaxX = wPt.x + snapThresholdWorld * 1.5;
+  const qMinY = wPt.y - snapThresholdWorld * 1.5;
+  const qMaxY = wPt.y + snapThresholdWorld * 1.5;
+
+  const nearbyEntities = [];
+  const nearbySegments = [];
+
+  // 1. Lọc nhanh các đối tượng gần vùng trỏ chuột
+  for (let e of entities) {
+    const bb = getEntityBoundingBox(e);
+    if (!bb) continue;
+    if (bb.maxX < qMinX || bb.minX > qMaxX || bb.maxY < qMinY || bb.minY > qMaxY) {
+      continue;
+    }
+    nearbyEntities.push(e);
+    const segs = extractEntitySegments(e);
+    for (let s of segs) nearbySegments.push(s);
+  }
+
+  // 2. Thu thập các điểm hình học chuẩn: ENDPOINT, MIDPOINT, CENTER, QUADRANT
+  for (let e of nearbyEntities) {
+    if (e.type === 'LINE' || e.type === 'DIMENSION') {
+      if (e.p1 && e.p2) {
+        const p1 = { x: e.p1[0], y: e.p1[1] };
+        const p2 = { x: e.p2[0], y: e.p2[1] };
+        const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        candidates.push({ x: p1.x, y: p1.y, type: 'ENDPOINT', desc: 'Điểm mút (Endpoint)', weight: 0.90, entityId: e.id });
+        candidates.push({ x: p2.x, y: p2.y, type: 'ENDPOINT', desc: 'Điểm mút (Endpoint)', weight: 0.90, entityId: e.id });
+        candidates.push({ x: mid.x, y: mid.y, type: 'MIDPOINT', desc: 'Trung điểm (Midpoint)', weight: 1.00, entityId: e.id });
+      }
+    } else if (e.type === 'RECTANGLE') {
+      const corners = [
+        { x: e.x, y: e.y },
+        { x: e.x + e.w, y: e.y },
+        { x: e.x + e.w, y: e.y + e.h },
+        { x: e.x, y: e.y + e.h }
+      ];
+      for (let c of corners) {
+        candidates.push({ x: c.x, y: c.y, type: 'ENDPOINT', desc: 'Góc hộp (Corner)', weight: 0.90, entityId: e.id });
+      }
+      // 4 Edge Midpoints
+      candidates.push({ x: e.x + e.w / 2, y: e.y, type: 'MIDPOINT', desc: 'Trung điểm mép', weight: 1.00, entityId: e.id });
+      candidates.push({ x: e.x + e.w, y: e.y + e.h / 2, type: 'MIDPOINT', desc: 'Trung điểm mép', weight: 1.00, entityId: e.id });
+      candidates.push({ x: e.x + e.w / 2, y: e.y + e.h, type: 'MIDPOINT', desc: 'Trung điểm mép', weight: 1.00, entityId: e.id });
+      candidates.push({ x: e.x, y: e.y + e.h / 2, type: 'MIDPOINT', desc: 'Trung điểm mép', weight: 1.00, entityId: e.id });
+      // Center
+      candidates.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, type: 'CENTER', desc: 'Tâm hình (Center)', weight: 0.95, entityId: e.id });
+    } else if (e.type === 'CIRCLE') {
+      const cx = e.cx, cy = e.cy, r = e.r || 50;
+      candidates.push({ x: cx, y: cy, type: 'CENTER', desc: 'Tâm đường tròn (Center)', weight: 0.95, entityId: e.id });
+      candidates.push({ x: cx + r, y: cy, type: 'QUADRANT', desc: 'Góc 1/4 (0° Quadrant)', weight: 1.05, entityId: e.id });
+      candidates.push({ x: cx, y: cy + r, type: 'QUADRANT', desc: 'Góc 1/4 (90° Quadrant)', weight: 1.05, entityId: e.id });
+      candidates.push({ x: cx - r, y: cy, type: 'QUADRANT', desc: 'Góc 1/4 (180° Quadrant)', weight: 1.05, entityId: e.id });
+      candidates.push({ x: cx, y: cy - r, type: 'QUADRANT', desc: 'Góc 1/4 (270° Quadrant)', weight: 1.05, entityId: e.id });
+    } else if (e.type === 'ARC') {
+      if (e.cx !== undefined && e.cy !== undefined) {
+        candidates.push({ x: e.cx, y: e.cy, type: 'CENTER', desc: 'Tâm cung tròn (Arc Center)', weight: 0.95, entityId: e.id });
+      }
+      if (e.p1 && e.p2) {
+        candidates.push({ x: e.p1[0], y: e.p1[1], type: 'ENDPOINT', desc: 'Đầu cung tròn', weight: 0.90, entityId: e.id });
+        candidates.push({ x: e.p2[0], y: e.p2[1], type: 'ENDPOINT', desc: 'Cuối cung tròn', weight: 0.90, entityId: e.id });
+      }
+      if (e.mid) {
+        candidates.push({ x: e.mid[0], y: e.mid[1], type: 'MIDPOINT', desc: 'Đỉnh giữa cung', weight: 1.00, entityId: e.id });
+      }
+    } else if (e.type === 'POLYLINE' || e.type === 'POLYGON') {
+      const pts = (e.points || e.pts || []).map(p => ({ x: p[0] !== undefined ? p[0] : p.x, y: p[1] !== undefined ? p[1] : p.y }));
+      for (let p of pts) {
+        candidates.push({ x: p.x, y: p.y, type: 'ENDPOINT', desc: 'Đỉnh đa giác (Vertex)', weight: 0.90, entityId: e.id });
+      }
+      for (let i = 0; i < pts.length - 1; i++) {
+        candidates.push({ x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2, type: 'MIDPOINT', desc: 'Trung điểm đoạn', weight: 1.00, entityId: e.id });
+      }
+      if (e.type === 'POLYGON' && pts.length > 2) {
+        let sumX = 0, sumY = 0;
+        for (let p of pts) { sumX += p.x; sumY += p.y; }
+        candidates.push({ x: sumX / pts.length, y: sumY / pts.length, type: 'CENTER', desc: 'Tâm đa giác', weight: 0.95, entityId: e.id });
+      }
+    } else if (e.type === 'TEXT') {
+      candidates.push({ x: e.x, y: e.y, type: 'ENDPOINT', desc: 'Điểm chèn Text (Insert Point)', weight: 0.95, entityId: e.id });
+    }
+  }
+
+  // 3. Tính toán Giao điểm chính xác giữa các đoạn thẳng cắt nhau (INTERSECTION)
+  for (let i = 0; i < nearbySegments.length; i++) {
+    for (let j = i + 1; j < nearbySegments.length; j++) {
+      const s1 = nearbySegments[i], s2 = nearbySegments[j];
+      if (s1.entity && s2.entity && s1.entity.id === s2.entity.id && (s1.entity.type === 'LINE')) continue;
+      const inter = getSegmentIntersection(s1.p1, s1.p2, s2.p1, s2.p2);
+      if (inter) {
+        candidates.push({
+          x: inter.x,
+          y: inter.y,
+          type: 'INTERSECTION',
+          desc: 'Giao điểm (Intersection)',
+          weight: 0.85,
+          entityId: `${s1.entity?.id || ''}_${s2.entity?.id || ''}`
+        });
+      }
+    }
+  }
+
+  // 4. Tính điểm vuông góc (PERPENDICULAR) khi đang vẽ từ điểm gốc
+  if (isDrawing && startPoint) {
+    for (let s of nearbySegments) {
+      const l2 = (s.p2.x - s.p1.x) ** 2 + (s.p2.y - s.p1.y) ** 2;
+      if (l2 > 0) {
+        let t = ((startPoint.x - s.p1.x) * (s.p2.x - s.p1.x) + (startPoint.y - s.p1.y) * (s.p2.y - s.p1.y)) / l2;
+        if (t >= 0 && t <= 1) {
+          const perpX = s.p1.x + t * (s.p2.x - s.p1.x);
+          const perpY = s.p1.y + t * (s.p2.y - s.p1.y);
+          candidates.push({
+            x: perpX,
+            y: perpY,
+            type: 'PERPENDICULAR',
+            desc: 'Vuông góc (Perpendicular)',
+            weight: 1.10,
+            entityId: s.entity?.id
+          });
         }
       }
     }
   }
-  return nearest;
+
+  // 5. Tìm ứng viên tốt nhất dựa trên khoảng cách và hệ số ưu tiên (Ranked Matching)
+  let bestCandidate = null;
+  let bestScore = snapThresholdWorld;
+
+  for (let c of candidates) {
+    if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) continue;
+    const d = Math.hypot(c.x - wPt.x, c.y - wPt.y);
+    if (d <= snapThresholdWorld) {
+      const score = d * (c.weight || 1.0);
+      if (score < bestScore) {
+        bestScore = score;
+        bestCandidate = { x: c.x, y: c.y, type: c.type, desc: c.desc, entityId: c.entityId };
+      }
+    }
+  }
+
+  // 6. Nếu không có điểm đặc biệt, kiểm tra điểm nằm trực tiếp trên nét (NEAREST)
+  if (!bestCandidate) {
+    let nearestSegPt = null;
+    let minSegD = snapThresholdWorld * 0.75;
+    for (let s of nearbySegments) {
+      const l2 = (s.p2.x - s.p1.x) ** 2 + (s.p2.y - s.p1.y) ** 2;
+      if (l2 === 0) continue;
+      let t = ((wPt.x - s.p1.x) * (s.p2.x - s.p1.x) + (wPt.y - s.p1.y) * (s.p2.y - s.p1.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      const px = s.p1.x + t * (s.p2.x - s.p1.x);
+      const py = s.p1.y + t * (s.p2.y - s.p1.y);
+      const d = Math.hypot(px - wPt.x, py - wPt.y);
+      if (d < minSegD) {
+        minSegD = d;
+        nearestSegPt = { x: px, y: py, type: 'NEAREST', desc: 'Trên đoạn thẳng (Nearest)', entityId: s.entity?.id };
+      }
+    }
+    if (nearestSegPt) {
+      bestCandidate = nearestSegPt;
+    }
+  }
+
+  // Cập nhật trạng thái bắt điểm toàn cục
+  activeSnapPoint = bestCandidate ? { ...bestCandidate } : null;
+  return bestCandidate ? { x: bestCandidate.x, y: bestCandidate.y } : null;
 }
 
+// Khóa hướng trực giao 90° (ORTHO F8)
 function applyOrthoPoint(start, target) {
   if (!orthoMode || !start) return target;
   let dx = Math.abs(target.x - start.x);
@@ -1755,11 +2206,14 @@ function applyOrthoPoint(start, target) {
   else return { x: start.x, y: target.y };
 }
 
+// Tính khoảng cách chạm tới đối tượng có tính phân tầng ưu tiên (Hit Testing with Layer Priority)
 function getHitDistance(pt, e) {
-  if (!e || e.layer === 'BOM_TABLE') return Infinity;
+  if (!e) return Infinity;
+  let baseDist = Infinity;
+
   if (e.type === 'LINE' || e.type === 'DIMENSION') {
     if (!e.p1 || !e.p2) return Infinity;
-    return distToSegment(pt, { x: e.p1[0], y: e.p1[1] }, { x: e.p2[0], y: e.p2[1] });
+    baseDist = distToSegment(pt, { x: e.p1[0], y: e.p1[1] }, { x: e.p2[0], y: e.p2[1] });
   } else if (e.type === 'RECTANGLE') {
     let p1 = { x: e.x, y: e.y }, p2 = { x: e.x + e.w, y: e.y };
     let p3 = { x: e.x + e.w, y: e.y + e.h }, p4 = { x: e.x, y: e.y + e.h };
@@ -1769,16 +2223,17 @@ function getHitDistance(pt, e) {
     let d4 = distToSegment(pt, p4, p1);
     let edgeDist = Math.min(d1, d2, d3, d4);
     if ((e.fillColor && e.fillColor !== 'transparent' || e.isHatched) && pt.x >= e.x && pt.x <= e.x + e.w && pt.y >= e.y && pt.y <= e.y + e.h) {
-      return 0;
+      // Nhấp trong lòng Hatch có độ ưu tiên thấp hơn nhấp trực tiếp vào cạnh
+      return edgeDist < 12 / zoom ? edgeDist : edgeDist + 8 / zoom;
     }
-    return edgeDist;
+    baseDist = edgeDist;
   } else if (e.type === 'CIRCLE') {
     let d = Math.hypot(pt.x - e.cx, pt.y - e.cy);
-    if (e.fillColor && e.fillColor !== 'transparent' && d <= e.r) return 0;
-    return Math.abs(d - e.r);
+    if (e.fillColor && e.fillColor !== 'transparent' && d <= e.r) return d;
+    baseDist = Math.abs(d - e.r);
   } else if (e.type === 'ELLIPSE') {
     let d = Math.hypot(pt.x - e.cx, pt.y - e.cy);
-    return Math.abs(d - (e.rx || 100));
+    baseDist = Math.abs(d - (e.rx || 100));
   } else if (e.type === 'POLYGON' || e.type === 'POLYLINE') {
     let pts = (e.points || e.pts || []).map(p => ({ x: p[0] !== undefined ? p[0] : p.x, y: p[1] !== undefined ? p[1] : p.y }));
     if (pts.length < 2) return Infinity;
@@ -1788,13 +2243,16 @@ function getHitDistance(pt, e) {
       if (ed < minEdgeD) minEdgeD = ed;
     }
     if ((e.closed || e.type === 'POLYGON') && isPointInPoly(pt, pts)) {
-      return 0;
+      return minEdgeD < 12 / zoom ? minEdgeD : minEdgeD + 8 / zoom;
     }
-    return minEdgeD;
+    baseDist = minEdgeD;
   } else if (e.type === 'TEXT') {
-    return Math.hypot(pt.x - e.x, pt.y - e.y);
+    let bb = getEntityBoundingBox(e);
+    if (bb && pt.x >= bb.minX && pt.x <= bb.maxX && pt.y >= bb.minY && pt.y <= bb.maxY) return 0;
+    baseDist = Math.hypot(pt.x - e.x, pt.y - e.y);
   }
-  return Infinity;
+
+  return baseDist;
 }
 
 function checkHit(pt, e) {
@@ -1811,20 +2269,40 @@ function distToSegment(p, v, w) {
 }
 
 function getEntityBoundingBox(e) {
+  if (!e) return null;
   if (e.p1 && e.p2) {
-    return { minX: Math.min(e.p1[0], e.p2[0]), maxX: Math.max(e.p1[0], e.p2[0]), minY: Math.min(e.p1[1], e.p2[1]), maxY: Math.max(e.p1[1], e.p2[1]) };
+    let minX = Math.min(e.p1[0], e.p2[0]), maxX = Math.max(e.p1[0], e.p2[0]);
+    let minY = Math.min(e.p1[1], e.p2[1]), maxY = Math.max(e.p1[1], e.p2[1]);
+    if (e.type === 'DIMENSION') {
+      let off = Math.abs(e.offset || 350);
+      return { minX: minX - off, maxX: maxX + off, minY: minY - off, maxY: maxY + off };
+    }
+    return { minX, maxX, minY, maxY };
   }
   if (e.x !== undefined && e.w !== undefined) {
-    return { minX: e.x, maxX: e.x + e.w, minY: e.y, maxY: e.y + e.h };
+    return { minX: Math.min(e.x, e.x + e.w), maxX: Math.max(e.x, e.x + e.w), minY: Math.min(e.y, e.y + (e.h || 0)), maxY: Math.max(e.y, e.y + (e.h || 0)) };
   }
-  if (e.cx !== undefined && e.r !== undefined) {
-    return { minX: e.cx - e.r, maxX: e.cx + e.r, minY: e.cy - e.r, maxY: e.cy + e.r };
+  if (e.cx !== undefined) {
+    let rx = e.rx || e.r || 50;
+    let ry = e.ry || e.r || 50;
+    return { minX: e.cx - rx, maxX: e.cx + rx, minY: e.cy - ry, maxY: e.cy + ry };
   }
   if (e.points || e.pts) {
     let pts = e.points || e.pts;
     let xs = pts.map(p => p[0] !== undefined ? p[0] : p.x);
     let ys = pts.map(p => p[1] !== undefined ? p[1] : p.y);
     return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+  }
+  if (e.type === 'TEXT' || (e.x !== undefined && e.y !== undefined)) {
+    let size = Math.max(e.size || 140, 20);
+    let strLen = e.text ? String(e.text).length : 4;
+    let w = strLen * size * 0.65;
+    let h = size * 1.2;
+    let minX = e.align === 'center' ? e.x - w / 2 : (e.align === 'right' ? e.x - w : e.x);
+    let maxX = minX + w;
+    let minY = e.y - h / 2;
+    let maxY = e.y + h / 2;
+    return { minX, maxX, minY, maxY };
   }
   return null;
 }
@@ -1851,12 +2329,10 @@ function lineSegmentsIntersect(p1, p2, p3, p4) {
 }
 
 function lineIntersectsBox(p1, p2, minX, maxX, minY, maxY) {
-  // Check if either end is inside
   if ((p1.x >= minX && p1.x <= maxX && p1.y >= minY && p1.y <= maxY) ||
       (p2.x >= minX && p2.x <= maxX && p2.y >= minY && p2.y <= maxY)) {
     return true;
   }
-  // Check intersection with all 4 box edges
   const b1 = { x: minX, y: minY }, b2 = { x: maxX, y: minY };
   const b3 = { x: maxX, y: maxY }, b4 = { x: minX, y: maxY };
   return lineSegmentsIntersect(p1, p2, b1, b2) ||
@@ -1866,25 +2342,19 @@ function lineIntersectsBox(p1, p2, minX, maxX, minY, maxY) {
 }
 
 function isEntityInBox(e, minX, maxX, minY, maxY, isCrossing) {
-  if (e.layer === 'BOM_TABLE') return false;
   let bb = getEntityBoundingBox(e);
   if (!bb) return false;
 
   if (!isCrossing) {
-    // Window Mode: Entity must be completely inside the box
     return bb.minX >= minX && bb.maxX <= maxX && bb.minY >= minY && bb.maxY <= maxY;
   } else {
-    // Crossing Mode: Box overlaps bounding box OR entity intersects box
     if (bb.maxX < minX || bb.minX > maxX || bb.maxY < minY || bb.minY > maxY) {
       return false;
     }
-    // Specific geometry tests
     if (e.type === 'LINE' || e.type === 'DIMENSION') {
       let p1 = { x: e.p1[0], y: e.p1[1] }, p2 = { x: e.p2[0], y: e.p2[1] };
       return lineIntersectsBox(p1, p2, minX, maxX, minY, maxY);
-    } else if (e.type === 'RECTANGLE') {
-      return true; // Bounding box already overlapped
-    } else if (e.type === 'CIRCLE') {
+    } else if (e.type === 'RECTANGLE' || e.type === 'TEXT' || e.type === 'CIRCLE' || e.type === 'ARC' || e.type === 'ELLIPSE') {
       return true;
     } else if (e.type === 'POLYGON' || e.type === 'POLYLINE') {
       let pts = (e.points || e.pts || []).map(p => ({ x: p[0] !== undefined ? p[0] : p.x, y: p[1] !== undefined ? p[1] : p.y }));
@@ -1900,6 +2370,7 @@ function isEntityInBox(e, minX, maxX, minY, maxY, isCrossing) {
     }
   }
 }
+
 
 
 // === js/renderer/canvas.js ===
@@ -1938,6 +2409,16 @@ function animate() {
   // Draw Selection Box (AutoCAD Window / Crossing Box)
   if (typeof drawSelectionBox === 'function') {
     drawSelectionBox();
+  }
+
+  // Draw Coordinate & Cell Inspector Overlay (ID / CHECK tool)
+  if (typeof drawInspectorOverlay === 'function') {
+    drawInspectorOverlay();
+  }
+
+  // Draw High-Precision AutoCAD OSNAP Visual Marker & Glyph
+  if (typeof drawOsnapGlyph === 'function') {
+    drawOsnapGlyph();
   }
 
   if (typeof drawCrosshair === 'function') {
@@ -2249,9 +2730,63 @@ function drawRubberband() {
     ctx.lineTo(s2.x, s2.y);
     ctx.stroke();
     let dx = activeEnd.x - startPoint.x, dy = activeEnd.y - startPoint.y;
+    let d = Math.hypot(dx, dy);
     ctx.font = 'bold 13px monospace';
     ctx.fillStyle = '#38bdf8';
-    ctx.fillText(`ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm`, s2.x + 12, s2.y - 12);
+    ctx.fillText(`ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm | L: ${d.toFixed(0)} mm`, s2.x + 12, s2.y - 12);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    for (let e of entities) {
+      if (selectedIds.has(e.id)) {
+        let ghost = translateEntity(e, dx, dy);
+        drawEntity(ghost, false);
+      }
+    }
+    ctx.restore();
+  } else if (currentTool === 'ROTATE') {
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.stroke();
+    let angRad = Math.atan2(activeEnd.y - startPoint.y, activeEnd.x - startPoint.x);
+    let deg = (angRad * 180 / Math.PI + 360) % 360;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`Góc xoay: ${deg.toFixed(1)}°`, s2.x + 12, s2.y - 12);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    for (let e of entities) {
+      if (selectedIds.has(e.id)) {
+        let ghost = rotateEntity(e, startPoint, angRad);
+        drawEntity(ghost, false);
+      }
+    }
+    ctx.restore();
+  } else if (currentTool === 'SCALE') {
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.stroke();
+    let d = Math.hypot(activeEnd.x - startPoint.x, activeEnd.y - startPoint.y);
+    let factor = Math.max(d / 100, 0.01);
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`Tỉ lệ: ${factor.toFixed(2)}x`, s2.x + 12, s2.y - 12);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    for (let e of entities) {
+      if (selectedIds.has(e.id)) {
+        let ghost = scaleEntity(e, startPoint, factor);
+        drawEntity(ghost, false);
+      }
+    }
+    ctx.restore();
   } else if (currentTool === 'RECTANGLE') {
     let minX = Math.min(startPoint.x, activeEnd.x), maxY = Math.max(startPoint.y, activeEnd.y);
     let s = worldToScreen(minX, maxY);
@@ -2296,6 +2831,17 @@ function drawRubberband() {
     ctx.font = 'bold 12px monospace';
     ctx.fillStyle = '#ec4899';
     ctx.fillText('TRỤC ĐỐI XỨNG', (s1.x + s2.x) / 2 + 10, (s1.y + s2.y) / 2);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    for (let e of entities) {
+      if (selectedIds.has(e.id)) {
+        let ghost = mirrorEntity(e, startPoint, activeEnd);
+        drawEntity(ghost, false);
+      }
+    }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -2331,6 +2877,180 @@ function drawSelectionBox() {
     ctx.fillRect(x, y, w, h);
     ctx.strokeRect(x, y, w, h);
   }
+  ctx.restore();
+}
+
+// ===============================================================================
+//     LIVE COORDINATE, OBJECT & GRID CELL INSPECTOR OVERLAY (LỆNH ID / CHECK)
+// ===============================================================================
+function drawInspectorOverlay() {
+  if (currentTool !== 'ID' && currentTool !== 'CHECK') return;
+
+  const wx = mouseWorld.x;
+  const wy = mouseWorld.y;
+
+  // Tính ô trần 600x600 chuẩn
+  const cellSize = 600;
+  const col = Math.floor(wx / cellSize);
+  const row = Math.floor(wy / cellSize);
+  const cellMinX = col * cellSize;
+  const cellMinY = row * cellSize;
+  const cellMaxX = cellMinX + cellSize;
+  const cellMaxY = cellMinY + cellSize;
+  const centerX = cellMinX + cellSize / 2;
+  const centerY = cellMinY + cellSize / 2;
+
+  // 1. Vẽ khung viền ô trần 600x600 đang soi
+  ctx.save();
+  const sTL = worldToScreen(cellMinX, cellMaxY);
+  const sBR = worldToScreen(cellMaxX, cellMinY);
+  const sWidth = sBR.x - sTL.x;
+  const sHeight = sBR.y - sTL.y;
+
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+  ctx.fillRect(sTL.x, sTL.y, sWidth, sHeight);
+
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(sTL.x, sTL.y, sWidth, sHeight);
+
+  // 2. Vẽ tâm ô trần
+  const sCenter = worldToScreen(centerX, centerY);
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#facc15';
+  ctx.fillStyle = '#facc15';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(sCenter.x, sCenter.y, 4, 0, 2 * Math.PI);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(sCenter.x - 8, sCenter.y); ctx.lineTo(sCenter.x + 8, sCenter.y);
+  ctx.moveTo(sCenter.x, sCenter.y - 8); ctx.lineTo(sCenter.x, sCenter.y + 8);
+  ctx.stroke();
+
+  // 3. Tìm vật thể dưới trỏ chuột
+  let found = typeof findClosestEntity === 'function' ? findClosestEntity(mouseWorld) : null;
+  let targetDesc = found ? `Vật thể: #${found.id} (${found.type}, Layer: ${found.layer || '0'})` : 'Vật thể: (Khoảng trống)';
+
+  // 4. Vẽ bảng thông số Head-Up Display ngay cạnh con trỏ
+  const sx = Math.min(mouseScreen.x + 18, canvas.width - 260);
+  const sy = Math.max(mouseScreen.y - 80, 10);
+  const boxW = 250;
+  const boxH = 75;
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(sx, sy, boxW, boxH, 6);
+  else ctx.rect(sx, sy, boxW, boxH);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = 'bold 11.5px monospace';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText(`📍 X: ${wx.toFixed(1)} | Y: ${wy.toFixed(1)} mm`, sx + 8, sy + 18);
+
+  ctx.fillStyle = '#facc15';
+  ctx.fillText(`📐 Ô [Cột: ${col}, Hàng: ${row}] (600x600)`, sx + 8, sy + 36);
+
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText(`🎯 Tâm ô: (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`, sx + 8, sy + 54);
+
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '10px monospace';
+  ctx.fillText(`${targetDesc}`, sx + 8, sy + 69);
+
+  ctx.restore();
+}
+
+// ===============================================================================
+//     AUTOCAD OSNAP VISUAL GLYPH & TOOLTIP MARKER RENDERER
+// ===============================================================================
+function drawOsnapGlyph() {
+  if (!activeSnapPoint || !activeSnapPoint.type) return;
+
+  const s = worldToScreen(activeSnapPoint.x, activeSnapPoint.y);
+  if (s.x < -30 || s.x > canvas.width + 30 || s.y < -30 || s.y > canvas.height + 30) return;
+
+  ctx.save();
+  ctx.strokeStyle = '#22c55e'; // AutoCAD Snap Green
+  ctx.fillStyle = '#22c55e';
+  ctx.lineWidth = 2.0;
+
+  const type = activeSnapPoint.type;
+  if (type === 'ENDPOINT') {
+    ctx.strokeRect(s.x - 5.5, s.y - 5.5, 11, 11);
+  } else if (type === 'MIDPOINT') {
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - 6.5);
+    ctx.lineTo(s.x + 6.5, s.y + 5.5);
+    ctx.lineTo(s.x - 6.5, s.y + 5.5);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (type === 'CENTER') {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 6, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 1.5, 0, 2 * Math.PI);
+    ctx.fill();
+  } else if (type === 'INTERSECTION') {
+    ctx.beginPath();
+    ctx.moveTo(s.x - 6, s.y - 6);
+    ctx.lineTo(s.x + 6, s.y + 6);
+    ctx.moveTo(s.x + 6, s.y - 6);
+    ctx.lineTo(s.x - 6, s.y + 6);
+    ctx.stroke();
+  } else if (type === 'QUADRANT') {
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - 6.5);
+    ctx.lineTo(s.x + 6.5, s.y);
+    ctx.lineTo(s.x, s.y + 6.5);
+    ctx.lineTo(s.x - 6.5, s.y);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (type === 'PERPENDICULAR') {
+    ctx.beginPath();
+    ctx.moveTo(s.x - 6, s.y - 6);
+    ctx.lineTo(s.x - 6, s.y + 6);
+    ctx.lineTo(s.x + 6, s.y + 6);
+    ctx.stroke();
+  } else if (type === 'NEAREST') {
+    ctx.beginPath();
+    ctx.moveTo(s.x - 5, s.y - 5);
+    ctx.lineTo(s.x + 5, s.y + 5);
+    ctx.lineTo(s.x - 5, s.y + 5);
+    ctx.lineTo(s.x + 5, s.y - 5);
+    ctx.closePath();
+    ctx.stroke();
+  } else {
+    ctx.strokeRect(s.x - 5, s.y - 5, 10, 10);
+  }
+
+  // OSNAP Badge Tooltip
+  const text = activeSnapPoint.desc || type;
+  ctx.font = 'bold 10.5px sans-serif';
+  const textMetrics = ctx.measureText(text);
+  const tagW = textMetrics.width + 12;
+  const tagH = 18;
+  const tagX = Math.min(s.x + 12, canvas.width - tagW - 8);
+  const tagY = Math.max(s.y - 20, 10);
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(tagX, tagY, tagW, tagH, 4);
+  else ctx.rect(tagX, tagY, tagW, tagH);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText(text, tagX + 6, tagY + 13);
+
   ctx.restore();
 }
 
@@ -2442,17 +3162,20 @@ function zoomAll() {
 // AUTOCAD GEOMETRY TRANSFORMATIONS & MODIFY ENGINES
 function translateEntity(e, dx, dy) {
   let c = JSON.parse(JSON.stringify(e));
-  if (c.p1) { c.p1[0] += dx; c.p1[1] += dy; c.p2[0] += dx; c.p2[1] += dy; }
-  if (c.x !== undefined) { c.x += dx; c.y += dy; }
-  if (c.cx !== undefined) { c.cx += dx; c.cy += dy; }
+  if (c.p1) { c.p1[0] += dx; c.p1[1] += dy; }
+  if (c.p2) { c.p2[0] += dx; c.p2[1] += dy; }
+  if (c.x !== undefined) c.x += dx;
+  if (c.y !== undefined) c.y += dy;
+  if (c.cx !== undefined) c.cx += dx;
+  if (c.cy !== undefined) c.cy += dy;
   if (c.points) c.points = c.points.map(p => [p[0] + dx, p[1] + dy]);
-  if (c.pts) c.pts = c.pts.map(p => ({ x: p.x + dx, y: p.y + dy }));
+  if (c.pts) c.pts = c.pts.map(p => ({ x: (p.x !== undefined ? p.x : p[0]) + dx, y: (p.y !== undefined ? p.y : p[1]) + dy }));
   return c;
 }
 
 function cloneEntity(e, dx, dy) {
   let c = translateEntity(e, dx, dy);
-  c.id = 'ent_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  c.id = 'ent_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
   return c;
 }
 
@@ -2465,19 +3188,23 @@ function rotateEntity(e, origin, angRad) {
       origin.y + rx * Math.sin(angRad) + ry * Math.cos(angRad)
     ];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let r1 = rotPt(c.p1[0], c.p1[1]), r2 = rotPt(c.p2[0], c.p2[1]);
     c.p1 = r1; c.p2 = r2;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let rc = rotPt(c.cx, c.cy);
     c.cx = rc[0]; c.cy = rc[1];
   }
-  if (c.x !== undefined) {
+  if (c.x !== undefined && c.y !== undefined) {
     let rc = rotPt(c.x, c.y);
     c.x = rc[0]; c.y = rc[1];
   }
   if (c.points) c.points = c.points.map(p => rotPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let r = rotPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: r[0], y: r[1] };
+  });
   return c;
 }
 
@@ -2486,21 +3213,29 @@ function scaleEntity(e, origin, factor) {
   function scPt(x, y) {
     return [origin.x + (x - origin.x) * factor, origin.y + (y - origin.y) * factor];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let s1 = scPt(c.p1[0], c.p1[1]), s2 = scPt(c.p2[0], c.p2[1]);
     c.p1 = s1; c.p2 = s2;
   }
-  if (c.x !== undefined && c.w !== undefined) {
+  if (c.x !== undefined && c.y !== undefined) {
     let s = scPt(c.x, c.y);
-    c.x = s[0]; c.y = s[1]; c.w *= factor; c.h *= factor;
+    c.x = s[0]; c.y = s[1];
+    if (c.w !== undefined) c.w *= factor;
+    if (c.h !== undefined) c.h *= factor;
+    if (c.size !== undefined) c.size *= factor;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let sc = scPt(c.cx, c.cy);
     c.cx = sc[0]; c.cy = sc[1];
     if (c.r) c.r *= factor;
-    if (c.rx) { c.rx *= factor; c.ry *= factor; }
+    if (c.rx) c.rx *= factor;
+    if (c.ry) c.ry *= factor;
   }
   if (c.points) c.points = c.points.map(p => scPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let s = scPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: s[0], y: s[1] };
+  });
   return c;
 }
 
@@ -2514,15 +3249,23 @@ function mirrorEntity(e, p1, p2) {
     let px = p1.x + u * dx, py = p1.y + u * dy;
     return [2 * px - x, 2 * py - y];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let m1 = mirPt(c.p1[0], c.p1[1]), m2 = mirPt(c.p2[0], c.p2[1]);
     c.p1 = m1; c.p2 = m2;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let mc = mirPt(c.cx, c.cy);
     c.cx = mc[0]; c.cy = mc[1];
   }
+  if (c.x !== undefined && c.y !== undefined) {
+    let mc = mirPt(c.x, c.y);
+    c.x = mc[0]; c.y = mc[1];
+  }
   if (c.points) c.points = c.points.map(p => mirPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let m = mirPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: m[0], y: m[1] };
+  });
   return c;
 }
 
@@ -2582,147 +3325,192 @@ function offsetEntity(e, dist, clickPt) {
 }
 
 // === js/tools/draw_tools.js ===
-// DRAWING TOOLS & MOUSE EVENT DISPATCHER
-viewport.addEventListener('mousemove', (e) => {
+// ===============================================================================
+//     DRAWING TOOLS & UNIFIED MOUSE / TOUCH EVENT DISPATCHER (DESKTOP & MOBILE)
+//     Hỗ trợ vẽ chuột, cảm ứng 1 ngón (chọn/quét/vẽ) & 2 ngón (Pinch Zoom & Pan)
+// ===============================================================================
+
+// Trạng thái Touch / Multi-touch
+let touchState = {
+  active: false,
+  mode: 'NONE', // 'NONE', 'SINGLE', 'PINCH_PAN'
+  startX: 0,
+  startY: 0,
+  hasMoved: false,
+  pinchDist: 0,
+  pinchCenter: { x: 0, y: 0 }
+};
+
+// 1. Unified Pointer Move Action
+function handlePointerMove(clientX, clientY) {
+  if (!viewport) return;
   const rect = viewport.getBoundingClientRect();
-  mouseScreen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  mouseScreen = { x: clientX - rect.left, y: clientY - rect.top };
 
   if (isPanning) {
-    panX += e.clientX - panStart.x;
-    panY += e.clientY - panStart.y;
-    panStart = { x: e.clientX, y: e.clientY };
+    panX += clientX - panStart.x;
+    panY += clientY - panStart.y;
+    panStart = { x: clientX, y: clientY };
     return;
   }
 
   let raw = screenToWorld(mouseScreen.x, mouseScreen.y);
-  let snap = findSnapPoint(raw);
+  let snap = typeof findSnapPoint === 'function' ? findSnapPoint(raw) : null;
 
   if (snap) {
     mouseWorld = snap;
     let sSnap = worldToScreen(snap.x, snap.y);
-    osnapBox.style.display = 'block';
-    osnapBox.style.left = `${sSnap.x}px`;
-    osnapBox.style.top = `${sSnap.y}px`;
+    if (osnapBox) {
+      osnapBox.style.display = 'block';
+      osnapBox.style.left = `${sSnap.x}px`;
+      osnapBox.style.top = `${sSnap.y}px`;
+    }
   } else {
     mouseWorld = raw;
-    osnapBox.style.display = 'none';
+    if (osnapBox) osnapBox.style.display = 'none';
   }
 
   if (isDrawing && startPoint) {
-    dynBox.style.display = 'block';
-    dynBox.style.left = `${mouseScreen.x + 15}px`;
-    dynBox.style.top = `${mouseScreen.y + 15}px`;
-    if (document.activeElement !== dynInput && !dynInput.value) {
+    if (dynBox) {
+      dynBox.style.display = 'block';
+      dynBox.style.left = `${mouseScreen.x + 15}px`;
+      dynBox.style.top = `${mouseScreen.y + 15}px`;
+    }
+    if (dynInput && document.activeElement !== dynInput && !dynInput.value) {
       let curTarget = applyOrthoPoint(startPoint, mouseWorld);
       let dist = Math.hypot(curTarget.x - startPoint.x, curTarget.y - startPoint.y);
       dynInput.placeholder = `${dist.toFixed(0)} mm`;
     }
   } else {
-    dynBox.style.display = 'none';
+    if (dynBox) dynBox.style.display = 'none';
   }
 
-  if (hudCoords) hudCoords.innerText = `X: ${mouseWorld.x.toFixed(1)} | Y: ${mouseWorld.y.toFixed(1)} mm`;
-});
+  if (hudCoords) {
+    hudCoords.innerText = `X: ${mouseWorld.x.toFixed(1)} | Y: ${mouseWorld.y.toFixed(1)} mm`;
+  }
+}
 
-viewport.addEventListener('mousedown', (e) => {
-  if (e.button === 1 || e.button === 2 || (currentTool === 'PAN' && e.button === 0)) {
+// 2. Unified Pointer Down Action
+function handlePointerDown(clientX, clientY, isPanBtn = false, shiftKey = false, originalEvent = null) {
+  if (!viewport) return;
+  if (isPanBtn || currentTool === 'PAN') {
     isPanning = true;
-    panStart = { x: e.clientX, y: e.clientY };
+    panStart = { x: clientX, y: clientY };
     return;
   }
 
-  if (e.button === 0) {
-    const rect = viewport.getBoundingClientRect();
-    mouseDownScreen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    mouseDownWorld = screenToWorld(mouseDownScreen.x, mouseDownScreen.y);
+  const rect = viewport.getBoundingClientRect();
+  mouseDownScreen = { x: clientX - rect.left, y: clientY - rect.top };
+  mouseDownWorld = screenToWorld(mouseDownScreen.x, mouseDownScreen.y);
 
-    // Kiểm tra nếu tool hiện tại là Plugin Tool
-    if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
-      let th = window.cadPluginHooks.toolHandlers[currentTool];
-      if (typeof th.onMouseDown === 'function') {
-        let handled = th.onMouseDown(mouseDownWorld, e);
-        if (handled === true) return;
-      }
-    }
-
-    // 1. Kiểm tra xem có đang ở chế độ Chọn (SELECT), Modify Tool hoặc Plugin Tool không
-    let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
-    const DRAWING_TOOLS = ['LINE', 'POLYLINE', 'RECTANGLE', 'CIRCLE', 'ARC', 'ELLIPSE', 'POLYGON', 'DIMENSION', 'TEXT', 'HATCH', 'DIST'];
-    const isDrawTool = DRAWING_TOOLS.includes(currentTool);
-    const isSelectionMode = !isDrawTool || currentTool === 'SELECT' || (pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection));
-
-    if (isSelectionMode) {
-      // Tìm đối tượng có khoảng cách GẦN NHẤT với điểm click chuột
-      let found = null;
-      let minD = 24 / zoom; // Tolerance
-      for (let i = entities.length - 1; i >= 0; i--) {
-        let ent = entities[i];
-        let d = typeof getHitDistance === 'function' ? getHitDistance(mouseDownWorld, ent) : (checkHit(mouseDownWorld, ent) ? 0 : Infinity);
-        if (d < minD) {
-          minD = d;
-          found = ent;
-        }
-      }
-
-      if (found) {
-        if (e.shiftKey) {
-          if (selectedIds.has(found.id)) selectedIds.delete(found.id);
-          else selectedIds.add(found.id);
-        } else {
-          if (pluginTool && (pluginTool.multiSelect || typeof pluginTool.allowSelection === 'function')) {
-            selectedIds.add(found.id);
-          } else {
-            selectedIds.clear();
-            selectedIds.add(found.id);
-          }
-        }
-        renderPropertiesPanel();
-        if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
-          pluginTool.onSelectionChange(selectedIds, false);
-        } else if (currentTool && currentTool !== 'SELECT' && !isDrawTool) {
-          setInfo(`👉 [${currentTool}] Đã chọn #${found.id} (${found.type}). Nhấn ENTER hoặc SPACE để thực thi lệnh.`);
-        } else {
-          let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
-          if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
-            setInfo(`✅ Đã chọn #${found.id} (${found.type}). Nhấn ENTER / SPACE để chạy lệnh [${lastCmd}] hoặc mở PR / M, CO, RO...`);
-          } else {
-            setInfo(`✅ Đã chọn #${found.id} (${found.type}). Mở Bảng Thuộc Tính đổi màu/độ dày nét hoặc dùng DEL, M, CO, RO...`);
-          }
-        }
-        isBoxSelecting = false;
-      } else {
-        // Không click trúng đối tượng -> Bắt đầu quét vùng chọn (AutoCAD Window/Crossing Box)
-        isBoxSelecting = true;
-        boxStartScreen = { ...mouseDownScreen };
-        boxStartWorld = { ...mouseDownWorld };
-      }
-      return;
-    }
-
-    // Các công cụ vẽ khác
-    handleCanvasClick();
+  // Khóa bắt điểm tức thì (Instant Snap Lock) ngay khi chạm/nhấp
+  let snap = typeof findSnapPoint === 'function' ? findSnapPoint(mouseDownWorld) : null;
+  if (snap) {
+    mouseDownWorld = { ...snap };
   }
-});
+  mouseScreen = { ...mouseDownScreen };
+  mouseWorld = { ...mouseDownWorld };
 
-window.addEventListener('mouseup', (e) => {
+  // Kiểm tra nếu tool hiện tại là Plugin Tool
+  if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
+    let th = window.cadPluginHooks.toolHandlers[currentTool];
+    if (typeof th.onMouseDown === 'function') {
+      let handled = th.onMouseDown(mouseDownWorld, originalEvent || { shiftKey });
+      if (handled === true) return;
+    }
+  }
+
+  // Chế độ Chọn (SELECT), Modify Tool hoặc Plugin Tool
+  const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+  let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
+  const isTransformTool = TRANSFORM_TOOLS.includes(currentTool);
+  const isPluginSelection = pluginTool && (typeof pluginTool.allowSelection === 'function' ? pluginTool.allowSelection() : !!pluginTool.allowSelection);
+
+  const isSelectionMode = (currentTool === 'SELECT') || (isTransformTool && selectedIds.size === 0) || Boolean(isPluginSelection);
+
+  if (isSelectionMode) {
+    let found = typeof findClosestEntity === 'function' ? findClosestEntity(mouseDownWorld) : null;
+
+    if (found) {
+      if (shiftKey) {
+        if (selectedIds.has(found.id)) selectedIds.delete(found.id);
+        else selectedIds.add(found.id);
+      } else {
+        if (pluginTool && (pluginTool.multiSelect || typeof pluginTool.allowSelection === 'function')) {
+          selectedIds.add(found.id);
+        } else if (isTransformTool) {
+          selectedIds.add(found.id);
+        } else {
+          selectedIds.clear();
+          selectedIds.add(found.id);
+        }
+      }
+      renderPropertiesPanel();
+      if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
+        pluginTool.onSelectionChange(selectedIds, false);
+      } else if (isTransformTool) {
+        setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấp Điểm Gốc (Base Point)...`);
+      } else {
+        let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
+        if (lastCmd && !['APPLOAD', 'OPEN', 'SAVE', 'DXF', 'CLEAR'].includes(lastCmd.toUpperCase())) {
+          setInfo(`✅ Đã chọn #${found.id} (${found.type}). Nhấn ENTER / SPACE để chạy lệnh [${lastCmd}] hoặc mở PR / M, CO, RO...`);
+        } else {
+          setInfo(`✅ Đã chọn #${found.id} (${found.type}). Mở Bảng Thuộc Tính đổi màu/độ dày nét hoặc dùng DEL, M, CO, RO...`);
+        }
+      }
+      isBoxSelecting = false;
+    } else {
+      // Bắt đầu quét vùng chọn (AutoCAD Window / Crossing Box)
+      isBoxSelecting = true;
+      boxStartScreen = { ...mouseDownScreen };
+      boxStartWorld = { ...mouseDownWorld };
+    }
+    return;
+  }
+
+  // Các công cụ vẽ & Modify / Transform (khi đã có đối tượng được chọn)
+  handleCanvasClick();
+}
+
+// 3. Unified Pointer Up Action
+function handlePointerUp(clientX, clientY, shiftKey = false, originalEvent = null) {
+  if (!viewport) return;
   isPanning = false;
 
   let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
-  const DRAWING_TOOLS = ['LINE', 'POLYLINE', 'RECTANGLE', 'CIRCLE', 'ARC', 'ELLIPSE', 'POLYGON', 'DIMENSION', 'TEXT', 'HATCH', 'DIST'];
-  const isDrawTool = DRAWING_TOOLS.includes(currentTool);
+  const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+  const isTransformTool = TRANSFORM_TOOLS.includes(currentTool);
 
   // Kiểm tra nếu tool hiện tại là Plugin Tool
   if (pluginTool && typeof pluginTool.onMouseUp === 'function') {
     const rect = viewport.getBoundingClientRect();
-    const upScreen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const upScreen = { x: clientX - rect.left, y: clientY - rect.top };
     const upWorld = screenToWorld(upScreen.x, upScreen.y);
-    let handled = pluginTool.onMouseUp(upWorld, e);
+    let handled = pluginTool.onMouseUp(upWorld, originalEvent || { shiftKey });
     if (handled === true) return;
+  }
+
+  // Xử lý kéo thả trực tiếp (Drag & Drop Move/Copy) khi thả tay/chuột
+  if (isDragMoving && isDrawing && startPoint && isTransformTool) {
+    const rect = viewport.getBoundingClientRect();
+    const upScreen = { x: clientX - rect.left, y: clientY - rect.top };
+    const dragDist = Math.hypot(upScreen.x - dragStartScreen.x, upScreen.y - dragStartScreen.y);
+    if (dragDist >= 6) {
+      let rawUp = screenToWorld(upScreen.x, upScreen.y);
+      let snap = typeof findSnapPoint === 'function' ? findSnapPoint(rawUp) : null;
+      let finalTarget = snap || rawUp;
+      const upWorld = applyOrthoPoint(startPoint, finalTarget);
+      finishDrawingWithPoint(upWorld);
+      isDragMoving = false;
+      return;
+    } else {
+      isDragMoving = false;
+    }
   }
 
   if (isBoxSelecting) {
     const rect = viewport.getBoundingClientRect();
-    const upScreen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const upScreen = { x: clientX - rect.left, y: clientY - rect.top };
     const upWorld = screenToWorld(upScreen.x, upScreen.y);
     const dragDist = Math.hypot(upScreen.x - boxStartScreen.x, upScreen.y - boxStartScreen.y);
 
@@ -2733,7 +3521,7 @@ window.addEventListener('mouseup', (e) => {
       const maxY = Math.max(boxStartWorld.y, upWorld.y);
       const isCrossing = (upScreen.x < boxStartScreen.x);
 
-      if (!e.shiftKey) {
+      if (!shiftKey && currentTool === 'SELECT') {
         selectedIds.clear();
       }
 
@@ -2748,12 +3536,10 @@ window.addEventListener('mouseup', (e) => {
       if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
         pluginTool.onSelectionChange(selectedIds, isCrossing);
       } else if (selectedIds.size > 0) {
-        if (['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'].includes(currentTool)) {
-          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấp Điểm Gốc (Base Point)...`);
+        if (isTransformTool) {
+          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER để chốt nhóm điểm (hoặc nhấp giữ kéo thả sang vị trí mới)...`);
         } else if (currentTool === 'ERASE') {
           setInfo(`👉 [ERASE] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER hoặc DEL để xóa.`);
-        } else if (currentTool && currentTool !== 'SELECT' && !isDrawTool) {
-          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER hoặc SPACE để thực thi lệnh.`);
         } else {
           const modeName = isCrossing ? '🟩 Crossing Selection' : '🟦 Window Selection';
           let lastCmd = window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null);
@@ -2767,8 +3553,8 @@ window.addEventListener('mouseup', (e) => {
         setInfo("💡 Không có đối tượng nào trong vùng quét.");
       }
     } else {
-      // Click nhẹ vào khoảng trống mà không kéo
-      if (!e.shiftKey) {
+      // Click / chạm nhẹ vào khoảng trống mà không kéo
+      if (currentTool === 'SELECT' && !shiftKey) {
         selectedIds.clear();
         renderPropertiesPanel();
         if (pluginTool && typeof pluginTool.onSelectionChange === 'function') {
@@ -2776,45 +3562,200 @@ window.addEventListener('mouseup', (e) => {
         } else {
           setInfo("Đã bỏ chọn.");
         }
+      } else if (isTransformTool && selectedIds.size === 0) {
+        setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước khi kéo thả.`);
       }
     }
 
     isBoxSelecting = false;
   }
-});
+}
 
-viewport.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
-  if (pluginTool && typeof pluginTool.onContextMenu === 'function') {
-    pluginTool.onContextMenu(e);
-    return;
-  }
-});
+// ===============================================================================
+//                       MOUSE EVENT LISTENERS (DESKTOP)
+// ===============================================================================
+if (viewport) {
+  viewport.addEventListener('mousemove', (e) => {
+    handlePointerMove(e.clientX, e.clientY);
+  });
 
-viewport.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const rect = viewport.getBoundingClientRect();
-  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  const wBefore = screenToWorld(mx, my);
-  const factor = e.deltaY < 0 ? 1.15 : 0.85;
-  zoom *= factor;
-  zoom = Math.min(Math.max(zoom, 0.005), 5.0);
-  const wAfter = screenToWorld(mx, my);
-  panX += (wAfter.x - wBefore.x) * zoom;
-  panY -= (wAfter.y - wBefore.y) * zoom;
-}, { passive: false });
+  viewport.addEventListener('mousedown', (e) => {
+    const isPanBtn = (e.button === 1 || e.button === 2);
+    handlePointerDown(e.clientX, e.clientY, isPanBtn, e.shiftKey, e);
+  });
 
+  window.addEventListener('mouseup', (e) => {
+    handlePointerUp(e.clientX, e.clientY, e.shiftKey, e);
+  });
+
+  viewport.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    let pluginTool = (window.cadPluginHooks && window.cadPluginHooks.toolHandlers) ? window.cadPluginHooks.toolHandlers[currentTool] : null;
+    if (pluginTool && typeof pluginTool.onContextMenu === 'function') {
+      pluginTool.onContextMenu(e);
+      return;
+    }
+  });
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const wBefore = screenToWorld(mx, my);
+    const factor = e.deltaY < 0 ? 1.15 : 0.85;
+    zoom *= factor;
+    zoom = Math.min(Math.max(zoom, 0.005), 5.0);
+    const wAfter = screenToWorld(mx, my);
+    panX += (wAfter.x - wBefore.x) * zoom;
+    panY -= (wAfter.y - wBefore.y) * zoom;
+  }, { passive: false });
+}
+
+// ===============================================================================
+//            MOBILE TOUCH & GESTURE LISTENERS (1-FINGER & 2-FINGER)
+// ===============================================================================
+if (viewport) {
+  viewport.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1) {
+      // 1 Finger: Chạm, Vẽ, Quét Chọn
+      const t = e.touches[0];
+      touchState.active = true;
+      touchState.mode = 'SINGLE';
+      touchState.startX = t.clientX;
+      touchState.startY = t.clientY;
+      touchState.hasMoved = false;
+
+      handlePointerMove(t.clientX, t.clientY);
+      handlePointerDown(t.clientX, t.clientY, false, false, e);
+    } else if (e.touches.length >= 2) {
+      // 2 Fingers: Pinch-to-Zoom & Pan (Hủy các thao tác vẽ dở của 1 ngón)
+      touchState.mode = 'PINCH_PAN';
+      isBoxSelecting = false;
+      isDragMoving = false;
+
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      touchState.pinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      touchState.pinchCenter = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1 && touchState.mode === 'SINGLE') {
+      const t = e.touches[0];
+      const moveDist = Math.hypot(t.clientX - touchState.startX, t.clientY - touchState.startY);
+      if (moveDist > 6) touchState.hasMoved = true;
+
+      handlePointerMove(t.clientX, t.clientY);
+    } else if (e.touches.length >= 2) {
+      // 2 Fingers Pinch Zoom & Pan mượt mà
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const newDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      const newCenter = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+
+      if (touchState.pinchDist > 0) {
+        const rect = viewport.getBoundingClientRect();
+        const scale = newDist / touchState.pinchDist;
+
+        // Zoom tâm là điểm chính giữa 2 ngón tay
+        const cx = newCenter.x - rect.left;
+        const cy = newCenter.y - rect.top;
+        const wBefore = screenToWorld(cx, cy);
+
+        zoom *= scale;
+        zoom = Math.min(Math.max(zoom, 0.005), 5.0);
+
+        const wAfter = screenToWorld(cx, cy);
+        panX += (wAfter.x - wBefore.x) * zoom;
+        panY -= (wAfter.y - wBefore.y) * zoom;
+
+        // Pan di chuyển theo vị trí tay kéo
+        panX += (newCenter.x - touchState.pinchCenter.x);
+        panY += (newCenter.y - touchState.pinchCenter.y);
+      }
+
+      touchState.pinchDist = newDist;
+      touchState.pinchCenter = newCenter;
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 0) {
+      if (touchState.mode === 'SINGLE') {
+        const endX = mouseScreen.x + viewport.getBoundingClientRect().left;
+        const endY = mouseScreen.y + viewport.getBoundingClientRect().top;
+        handlePointerUp(endX, endY, false, e);
+      }
+      touchState.active = false;
+      touchState.mode = 'NONE';
+      touchState.pinchDist = 0;
+      isPanning = false;
+    } else if (e.touches.length === 1) {
+      // Từ 2 ngón về 1 ngón -> Chuyển trạng thái nghỉ
+      touchState.mode = 'NONE';
+      touchState.pinchDist = 0;
+      isPanning = false;
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchcancel', (e) => {
+    touchState.active = false;
+    touchState.mode = 'NONE';
+    touchState.pinchDist = 0;
+    isPanning = false;
+    isBoxSelecting = false;
+    isDragMoving = false;
+  });
+}
+
+// ===============================================================================
+//                       ENTITY QUERY & DRAWING HANDLERS
+// ===============================================================================
 function findClosestEntity(pt, filterFn = null) {
   let bestEnt = null;
-  let minD = 24 / zoom;
+  const tolWorld = 28 / zoom;
+  let minScore = tolWorld;
+
   for (let i = entities.length - 1; i >= 0; i--) {
     let ent = entities[i];
     if (filterFn && !filterFn(ent)) continue;
+
+    // Lọc nhanh bằng Bounding Box trước khi tính toán chi tiết
+    let bb = typeof getEntityBoundingBox === 'function' ? getEntityBoundingBox(ent) : null;
+    if (bb) {
+      if (pt.x < bb.minX - tolWorld || pt.x > bb.maxX + tolWorld ||
+          pt.y < bb.minY - tolWorld || pt.y > bb.maxY + tolWorld) {
+        continue;
+      }
+    }
+
     let d = typeof getHitDistance === 'function' ? getHitDistance(pt, ent) : (checkHit(pt, ent) ? 0 : Infinity);
-    if (d < minD) {
-      minD = d;
-      bestEnt = ent;
+    if (d <= tolWorld) {
+      // Ưu tiên vật thể nhỏ/đèn/chữ/đoạn thẳng trước các vùng Hatch/mặt bằng lớn
+      let priorityBonus = 0;
+      if (ent.type === 'TEXT') priorityBonus = -4 / zoom;
+      else if (ent.type === 'CIRCLE' && (ent.r || 50) < 350) priorityBonus = -3 / zoom;
+      else if (ent.type === 'LINE') priorityBonus = -1 / zoom;
+      else if (ent.isHatched || (ent.fillColor && ent.fillColor !== 'transparent')) priorityBonus = 5 / zoom;
+
+      let score = d + priorityBonus;
+      if (score < minScore) {
+        minScore = score;
+        bestEnt = ent;
+      }
     }
   }
   return bestEnt;
@@ -2824,6 +3765,22 @@ function handleCanvasClick() {
   const pt = applyOrthoPoint(startPoint, mouseWorld);
 
   if (currentTool === 'PAN') return;
+
+  if (currentTool === 'ID' || currentTool === 'CHECK' || currentTool === 'INSPECT' || currentTool === 'TOADO') {
+    const cellSize = 600;
+    const col = Math.floor(pt.x / cellSize);
+    const row = Math.floor(pt.y / cellSize);
+    const centerX = col * cellSize + cellSize / 2;
+    const centerY = row * cellSize + cellSize / 2;
+    let found = typeof findClosestEntity === 'function' ? findClosestEntity(pt) : null;
+    let entInfo = found ? `Vật thể #${found.id} (${found.type}, Layer: ${found.layer || '0'})` : 'Không có vật thể';
+    let msg = `📍 [ID] X: ${pt.x.toFixed(2)} | Y: ${pt.y.toFixed(2)} mm | Ô [Cột ${col}, Hàng ${row}] | Tâm: (${centerX.toFixed(0)}, ${centerY.toFixed(0)}) | ${entInfo}`;
+    setInfo(msg, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(msg, 'success');
+    }
+    return;
+  }
 
   if (window.cadPluginHooks && window.cadPluginHooks.toolHandlers && window.cadPluginHooks.toolHandlers[currentTool]) {
     let th = window.cadPluginHooks.toolHandlers[currentTool];
@@ -2911,12 +3868,16 @@ function handleCanvasClick() {
     if (!isDrawing) {
       isDrawing = true;
       startPoint = pt;
-      dynInput.value = '';
-      dynInput.focus();
-      if (currentTool === 'ROTATE') setInfo("Nhấp Điểm Hướng Xoay (hoặc gõ độ xoay như 45, 90 + Enter)...");
-      else if (currentTool === 'SCALE') setInfo("Nhấp Điểm Tỉ Lệ (hoặc gõ hệ số 1.5, 2.0 + Enter)...");
-      else if (currentTool === 'MIRROR') setInfo("Đã chọn Điểm 1 của trục đối xứng. Nhấp Điểm 2...");
-      else setInfo(`Đã chọn Điểm Gốc. Nhấp Điểm Đích (hoặc gõ khoảng cách + Enter)...`);
+      isDragMoving = true;
+      dragStartScreen = { ...(typeof mouseDownScreen !== 'undefined' ? mouseDownScreen : mouseScreen) };
+      if (dynInput) {
+        dynInput.value = '';
+        dynInput.focus();
+      }
+      if (currentTool === 'ROTATE') setInfo("🔄 [ROTATE] Đã chọn Tâm Xoay. Nhấp Điểm Hướng Xoay (hoặc gõ độ xoay 45, 90 + Enter)...");
+      else if (currentTool === 'SCALE') setInfo("📐 [SCALE] Đã chọn Tâm Tỉ Lệ. Nhấp Điểm Tỉ Lệ (hoặc gõ hệ số 1.5, 2.0 + Enter)...");
+      else if (currentTool === 'MIRROR') setInfo("🪞 [MIRROR] Đã chọn Điểm 1 của trục đối xứng. Nhấp Điểm 2...");
+      else setInfo(`✥ [${currentTool}] Đang kéo di chuyển. Thả chuột/tay tại vị trí mới để hoàn tất (hoặc gõ khoảng cách + Enter)...`);
     } else {
       finishDrawingWithPoint(pt);
     }
@@ -2979,8 +3940,10 @@ function handleCanvasClick() {
     if (!isDrawing) {
       isDrawing = true;
       startPoint = pt;
-      dynInput.value = '';
-      dynInput.focus();
+      if (dynInput) {
+        dynInput.value = '';
+        dynInput.focus();
+      }
       setInfo(`${currentTool}: Đã chọn Điểm 1. Kéo và nhấp Điểm 2 (hoặc gõ số + Enter)...`);
     } else {
       finishDrawingWithPoint(pt);
@@ -3001,7 +3964,6 @@ if (dynInput) {
     }
   });
 }
-
 
 // === js/tools/create_entities.js ===
 // ==========================================================================
@@ -3057,7 +4019,7 @@ function finishDrawingWithPoint(targetPt) {
   } else if (currentTool === 'MOVE') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
     entities = entities.map(e => selectedIds.has(e.id) ? translateEntity(e, dx, dy) : e);
-    setInfo(`✥ Đã dời đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`);
+    setInfo(`✥ Đã dời ${selectedIds.size} đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`);
     selectTool('SELECT');
   } else if (currentTool === 'COPY') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
@@ -3076,8 +4038,7 @@ function finishDrawingWithPoint(targetPt) {
     setInfo(`🔄 Đã xoay đối tượng ${(angRad * 180 / Math.PI).toFixed(1)}° quanh điểm gốc.`);
     selectTool('SELECT');
   } else if (currentTool === 'SCALE') {
-    let d = Math.hypot(targetPt.x - startPoint.x, targetPt.y - startPoint.y);
-    let factor = Math.max(d / 500, 0.1);
+    let factor = targetPt.customScaleFactor !== undefined ? targetPt.customScaleFactor : (Math.hypot(targetPt.x - startPoint.x, targetPt.y - startPoint.y) / 100 || 1);
     entities = entities.map(e => selectedIds.has(e.id) ? scaleEntity(e, startPoint, factor) : e);
     setInfo(`📐 Đã Scale đối tượng tỉ lệ ${factor.toFixed(2)}x.`);
     selectTool('SELECT');
@@ -3098,19 +4059,38 @@ function handleDynInputSubmit() {
   let valStr = dynInput.value.trim() || dynInput.placeholder.replace(' mm', '').trim();
   let val = parseFloat(valStr);
 
-  if (!isFinite(val) || val <= 0) {
+  if (!isFinite(val)) {
     if (isDrawing && startPoint) finishDrawingWithPoint(mouseWorld);
     return;
   }
 
   if (currentTool === 'OFFSET') {
-    offsetDist = val;
+    if (val > 0) offsetDist = val;
     setInfo(`⚡ Khoảng cách Offset mới: ${offsetDist} mm. Hãy nhấp nét để offset.`);
     dynBox.style.display = 'none';
     return;
   }
 
   if (!isDrawing || !startPoint) return;
+
+  if (currentTool === 'ROTATE') {
+    let angRad = val * Math.PI / 180;
+    let targetPt = { x: startPoint.x + Math.cos(angRad) * 100, y: startPoint.y + Math.sin(angRad) * 100 };
+    finishDrawingWithPoint(targetPt);
+    return;
+  }
+
+  if (currentTool === 'SCALE') {
+    if (val <= 0) val = 1;
+    let targetPt = { x: startPoint.x + 100, y: startPoint.y, customScaleFactor: val };
+    finishDrawingWithPoint(targetPt);
+    return;
+  }
+
+  if (val <= 0) {
+    finishDrawingWithPoint(mouseWorld);
+    return;
+  }
 
   let activeEnd = applyOrthoPoint(startPoint, mouseWorld);
   let dx = activeEnd.x - startPoint.x, dy = activeEnd.y - startPoint.y;
@@ -3554,19 +4534,51 @@ function extractCommandsFromCode(code) {
     cmds.add(match[1].toUpperCase());
   }
 
-  // 3. JS registerCommand('NAME', ...)
-  let regRegex = /registerCommand\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
+  // 3. JS registerCommand('NAME', ...) hoặc registerPluginCommand('NAME', ...)
+  let regRegex = /(?:registerCommand|registerPluginCommand)\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
   while ((match = regRegex.exec(code)) !== null) {
     cmds.add(match[1].toUpperCase());
   }
 
-  // 4. JS window.initNAMETool = ...
+  // 4. JS registerPluginTool('NAME', ...)
+  let regToolRegex = /registerPluginTool\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
+  while ((match = regToolRegex.exec(code)) !== null) {
+    cmds.add(match[1].toUpperCase());
+  }
+
+  // 5. JS window.initNAMETool = ...
   let initRegex = /window(?:\.init|\[['"]init)([A-Za-z0-9_]+)Tool['"]?\]?\s*=/gi;
   while ((match = initRegex.exec(code)) !== null) {
     cmds.add(match[1].toUpperCase());
   }
 
   return Array.from(cmds);
+}
+
+/**
+ * Tự động trích xuất tên Tool từ tiêu đề comment hoặc lệnh trong mã nguồn
+ */
+function extractToolNameFromCode(code, fallback = '') {
+  if (!code) return fallback || '⚡ Plugin Tùy Chỉnh';
+
+  let lines = code.split('\n').slice(0, 15);
+  for (let l of lines) {
+    let clean = l.trim();
+    if (clean.startsWith(';;;') || clean.startsWith('//') || clean.startsWith('/*') || clean.startsWith('#')) {
+      let titleMatch = clean.match(/(?:PLUGIN|TOOL|TÊN|TITLE|BỘ CÔNG CỤ)\s*[:=–-]?\s*([^\r\n*]+)/i);
+      if (titleMatch && titleMatch[1].trim()) {
+        let name = titleMatch[1].trim().replace(/^[*#=;\s]+|[*#=;\s]+$/g, '');
+        if (name.length > 2 && name.length < 50) return name;
+      }
+    }
+  }
+
+  let cmds = extractCommandsFromCode(code);
+  if (cmds.length > 0) {
+    return `⚡ Tool ${cmds[0]}` + (cmds.length > 1 ? ` (+${cmds.length - 1} lệnh)` : '');
+  }
+
+  return fallback || `⚡ Script Tùy Chỉnh #${Date.now().toString().slice(-4)}`;
 }
 
 /**
@@ -3923,7 +4935,7 @@ function toggleToolStatus(idx) {
 /**
  * Xử lý danh sách nhiều File tải lên (Multi-file batch loader)
  */
-async function processFileList(files) {
+async function processFileList(files, showAlert = true) {
   if (!files || files.length === 0) return;
 
   let loadedCount = 0;
@@ -3986,7 +4998,9 @@ async function processFileList(files) {
   if (typeof logToCliHistory === 'function') {
     logToCliHistory(msg, 'success');
   }
-  alert(`Đã nạp thành công ${loadedCount} Tool!\nCác lệnh CLI mới sẵn sàng: ${allNewCmds.join(', ')}\nBạn có thể gõ trực tiếp trên thanh Command.`);
+  if (showAlert) {
+    alert(`Đã nạp thành công ${loadedCount} Tool!\nCác lệnh CLI mới sẵn sàng: ${allNewCmds.join(', ')}\nBạn có thể gõ trực tiếp trên thanh Command.`);
+  }
 }
 
 function readFileAsText(file) {
@@ -4007,50 +5021,69 @@ function handleToolFileUpload(e) {
 }
 
 /**
- * Đăng ký script nhập tay trực tiếp từ form
+ * Đăng ký script nhập tay trực tiếp từ form (Tự động nhận diện lệnh & tên Tool)
  */
 function registerCustomTool() {
-  let nameEl = document.getElementById('new-tool-name');
-  let cmdEl = document.getElementById('new-tool-cmd');
   let codeEl = document.getElementById('new-tool-code');
-  if (!nameEl || !cmdEl || !codeEl) return;
+  if (!codeEl) return;
 
-  let name = nameEl.value.trim();
-  let cmd = cmdEl.value.trim().toUpperCase();
   let code = codeEl.value.trim();
-
-  if (!name || !cmd) {
-    alert("Vui lòng nhập đầy đủ Tên Tool và Lệnh gọi (CLI).");
+  if (!code) {
+    alert("Vui lòng dán nội dung mã AutoLISP (.lsp) hoặc JavaScript (.js) vào khung.");
     return;
   }
 
-  let isLsp = code.includes('(defun') || code.startsWith(';');
+  let isLsp = code.includes('(defun') || code.startsWith(';') || code.includes(';;<JS_ENGINE>');
   let cmds = extractCommandsFromCode(code);
-  if (!cmds.includes(cmd)) cmds.unshift(cmd);
+  let name = extractToolNameFromCode(code);
+
+  if (cmds.length === 0) {
+    // Nếu không tìm thấy định nghĩa c:CMD cụ thể, tạo lệnh gọi mặc định
+    let defaultCmd = 'TOOL_' + Date.now().toString().slice(-4);
+    cmds = [defaultCmd];
+    window.registerCommand(defaultCmd, function() {
+      try {
+        (new Function(code))();
+      } catch (e) {
+        console.error("Lỗi thực thi script:", e);
+      }
+    }, `Thực thi script [${name}]`);
+  }
 
   let newTool = {
     id: 'tool_custom_' + Date.now(),
-    name: '⚡ ' + name,
-    fileName: 'custom_script.js',
-    cmd: cmd,
+    name: name,
+    fileName: isLsp ? (cmds[0] ? cmds[0].toLowerCase() + '.lsp' : 'custom_tool.lsp') : (cmds[0] ? cmds[0].toLowerCase() + '.js' : 'custom_tool.js'),
+    cmd: cmds[0] || 'PLUGIN',
     commands: cmds,
-    desc: 'Script tùy chỉnh người dùng thêm trực tiếp',
-    type: isLsp ? 'AutoLISP' : 'Script Người Dùng',
+    desc: `Tự động nhận diện (${cmds.length} lệnh: ${cmds.join(', ')})`,
+    type: isLsp ? 'AutoLISP Plugin' : 'JavaScript Plugin',
     enabled: true,
     code: code,
     loadedAt: Date.now()
   };
 
   executeToolCode(newTool);
-  customTools.push(newTool);
+
+  // Cập nhật nếu đã có tool cùng tên/lệnh
+  let existingIdx = customTools.findIndex(t => t.name === newTool.name || (t.cmd && t.cmd === newTool.cmd));
+  if (existingIdx >= 0) {
+    customTools[existingIdx] = newTool;
+  } else {
+    customTools.push(newTool);
+  }
+
   saveCustomToolsToStorage();
 
-  nameEl.value = '';
-  cmdEl.value = '';
   codeEl.value = '';
   renderApploadTable();
-  setInfo(`⚡ Đã đăng ký thành công Tool [${name}] (Lệnh: ${cmds.join(', ')}).`);
-  alert(`Đã đăng ký thành công Tool [${name}]!\nGõ "${cmd}" trong CLI để chạy.`);
+
+  let successMsg = `⚡ Đã nạp thành công [${name}] (${cmds.length} lệnh sẵn sàng: ${cmds.join(', ')}).`;
+  setInfo(successMsg, 'success');
+  if (typeof logToCliHistory === 'function') {
+    logToCliHistory(successMsg, 'success');
+  }
+  alert(`Đã nạp thành công Tool!\nCác lệnh CLI đã tự động nhận diện: ${cmds.join(', ')}\nBạn có thể gõ ngay trên thanh COMMAND hoặc click vào bảng để chạy.`);
 }
 
 /**
@@ -4177,9 +5210,11 @@ const KNOWN_COMMANDS = [
   { cmd: 'LWEIGHT', aliases: ['LW'], desc: 'Đổi độ dày nét vẽ' },
   { cmd: 'LINETYPE', aliases: ['LT'], desc: 'Đổi kiểu nét (Liền/Đứt/Trục/Chấm)' },
   { cmd: 'APPLOAD', aliases: ['AP', 'TOOL', 'PLUGIN'], desc: 'Bảng Quản Lý & Nạp Plugin ngoài (.js, .lsp)' },
+  { cmd: 'QSAVE', aliases: ['SAVE', 'LUU', 'WSAVE'], desc: 'Lưu bản vẽ & tiến trình vào CSDL (Ctrl+S)' },
+  { cmd: 'SAVEAS', aliases: ['SAVEPROJECT'], desc: 'Lưu bản vẽ thành dự án mới trong CSDL' },
   { cmd: 'DXF', aliases: [], desc: 'Xuất bản vẽ ra file AutoCAD DXF' },
-  { cmd: 'SAVE', aliases: ['JSON'], desc: 'Lưu bản vẽ JSON' },
-  { cmd: 'OPEN', aliases: ['LOAD'], desc: 'Mở file bản vẽ JSON hoặc DXF' },
+  { cmd: 'JSON', aliases: ['EXPORT', 'SAVETOFILE'], desc: 'Xuất bản vẽ dạng file JSON' },
+  { cmd: 'OPEN', aliases: ['OP', 'LOAD', 'IMPORT', 'UPLOAD', 'MO', 'MOFILE', 'FILE', 'TAIFILE', 'NAPFILE'], desc: 'Mở file bản vẽ (JSON, DXF) hoặc nạp Tool (LSP, JS) (Ctrl+O)' },
   { cmd: 'ZOOM', aliases: ['Z'], desc: 'Phóng to toàn bộ bản vẽ (Zoom All)' },
   { cmd: 'PAN', aliases: ['P'], desc: 'Dời góc nhìn bản vẽ' },
   { cmd: 'TOP', aliases: ['VTOP', 'VIEWTOP', 'PLAN'], desc: 'Đưa góc nhìn về Top (0°)' },
@@ -4190,6 +5225,7 @@ const KNOWN_COMMANDS = [
   { cmd: 'NEW', aliases: ['QNEW', 'BANVE', 'TAOMOI'], desc: 'Tạo bản vẽ mới sạch sẽ (Ctrl+N)' },
   { cmd: 'UNDO', aliases: ['U'], desc: 'Hoàn tác thao tác trước (Ctrl+Z)' },
   { cmd: 'REDO', aliases: ['REDO', 'LAMLAI'], desc: 'Làm lại thao tác vừa hoàn tác (Ctrl+Y)' },
+  { cmd: 'ID', aliases: ['CHECK', 'INSPECT', 'TOADO', 'SOI', 'SOITOADO'], desc: 'Soi tọa độ WCS, kiểm tra ô trần 600x600 & vật thể (HUD Inspector)' },
   { cmd: 'CLEAR', aliases: ['CLS', 'RESET'], desc: 'Xóa sạch toàn bộ bản vẽ' }
 ];
 
@@ -4548,7 +5584,7 @@ function runCommand(rawCmd) {
     recordCommandUsage('SELECT');
     selectedIds.clear();
     for (let ent of entities) {
-      if (ent.layer !== 'BOM_TABLE') selectedIds.add(ent.id);
+      selectedIds.add(ent.id);
     }
     renderPropertiesPanel();
     setInfo(`✅ Đã chọn tất cả (${selectedIds.size} đối tượng).`);
@@ -4592,6 +5628,12 @@ function runCommand(rawCmd) {
   if (cmd === 'H' || cmd === 'HATCH') { recordCommandUsage('HATCH'); selectTool('HATCH'); return; }
   if (cmd === 'DI' || cmd === 'DIST') { recordCommandUsage('DIST'); selectTool('DIST'); return; }
   if (cmd === 'DT' || cmd === 'TEXT' || cmd === 'MT') { recordCommandUsage('TEXT'); selectTool('TEXT'); return; }
+  if (['ID', 'CHECK', 'INSPECT', 'TOADO', 'SOI', 'SOITOADO'].includes(cmd)) {
+    recordCommandUsage('ID');
+    selectTool('ID');
+    setInfo("🔍 [ID / CHECK] Chế độ Soi Tọa Độ & Ô Trần 600x600 kích hoạt. Di chuột hoặc nhấp để xem chi tiết.", 'info');
+    return;
+  }
 
   // Erase and Clear
   if (cmd === 'E' || cmd === 'ERASE' || cmd === 'DEL' || cmd === 'DELETE') {
@@ -4607,8 +5649,23 @@ function runCommand(rawCmd) {
     if (typeof createNewDrawing === 'function') createNewDrawing(args[0] !== 'FORCE');
     return;
   }
-  if (cmd === 'OPEN' || cmd === 'LOAD' || cmd === 'IMPORT' || cmd === 'UPLOAD') { recordCommandUsage('OPEN'); openFilePicker(); return; }
-  if (cmd === 'SAVE' || cmd === 'JSON' || cmd === 'EXPORT') { recordCommandUsage('SAVE'); saveJSON(); return; }
+  if (cmd === 'QSAVE' || cmd === 'SAVE' || cmd === 'LUU' || cmd === 'WSAVE') {
+    recordCommandUsage('QSAVE');
+    if (typeof quickSaveProject === 'function') quickSaveProject(true);
+    else if (typeof autoSaveToDB === 'function') autoSaveToDB(true, true);
+    return;
+  }
+  if (cmd === 'SAVEAS' || cmd === 'SAVEPROJECT') {
+    recordCommandUsage('SAVEAS');
+    if (typeof saveProjectAsNewToDB === 'function') saveProjectAsNewToDB(args.join(' '));
+    return;
+  }
+  if (cmd === 'OPEN' || cmd === 'OP' || cmd === 'LOAD' || cmd === 'IMPORT' || cmd === 'UPLOAD' || cmd === 'MO' || cmd === 'MOFILE' || cmd === 'FILE' || cmd === 'TAIFILE' || cmd === 'NAPFILE') {
+    recordCommandUsage('OPEN');
+    openFilePicker();
+    return;
+  }
+  if (cmd === 'JSON' || cmd === 'EXPORT' || cmd === 'SAVETOFILE') { recordCommandUsage('JSON'); saveJSON(); return; }
   if (cmd === 'DXF') { recordCommandUsage('DXF'); exportDXF(); return; }
 
   // Utilities
@@ -4721,13 +5778,15 @@ function openSectionView() {
     { id: 'btn-TEXT', label: '🔤 Text (DT)', tags: 'text dt mt chu viet van ban ghi chu', desc: 'Chèn chữ kỹ thuật' },
 
     { id: 'btn-PROPERTIES', label: '📋 Bảng Thuộc Tính (PR)', tags: 'properties pr prop mo ch thuoc tinh mau layer net', desc: 'Mở bảng Quick Properties' },
+    { id: 'btn-QUICKSAVE', label: '💾 Lưu Bản Vẽ (QSAVE / Ctrl+S)', tags: 'save qsave luu ban ve tien trinh csdl ctrl s safe protect csdl tu dong', desc: 'Lưu bản vẽ & toàn bộ tiến trình vào CSDL' },
     { id: 'btn-NEW', label: '📄 Mới (Ctrl+N)', tags: 'new qnew ban ve moi tao moi ctrl n clearall', desc: 'Tạo bản vẽ mới sạch sẽ' },
     { id: 'btn-APPLOAD', label: '🧩 Nạp Tool (APPLOAD)', tags: 'appload ap tool plugin autolisp js addin nap mo rong', desc: 'Quản lý & nạp plugin mở rộng' },
     { id: 'btn-OPEN', label: '📂 Mở File (OPEN)', tags: 'open load file mo import nap json dxf', desc: 'Mở file bản vẽ JSON hoặc DXF' },
-    { id: 'btn-SAVE', label: '💾 Lưu JSON', tags: 'save json luu xuat export', desc: 'Lưu bản vẽ dạng file JSON' },
+    { id: 'btn-SAVE', label: '📤 Xuất JSON', tags: 'save json xuat export download tai file', desc: 'Xuất bản vẽ dạng file JSON tải về máy' },
     { id: 'btn-DXF', label: '📥 Xuất DXF', tags: 'dxf export autocad xuat file cad', desc: 'Xuất file DXF chuẩn AutoCAD' },
     { id: 'btn-ORTHO', label: '📐 ORTHO (F8)', tags: 'ortho f8 khoa vuong goc 90 do thang', desc: 'Bật/Tắt khóa vuông góc 90°' },
     { id: 'btn-DIST', label: '📏 Đo (DI)', tags: 'dist di do khoang cach', desc: 'Đo khoảng cách giữa 2 điểm' },
+    { id: 'btn-ID', label: '🎯 Soi Tọa Độ (ID)', tags: 'id check inspect toado soi o tran 600x600 toa do wcs hud', desc: 'Soi tọa độ WCS, kiểm tra ô trần 600x600 & vật thể' },
     { id: 'btn-PAN', label: '✋ Pan (P)', tags: 'pan p doi goc nhin keo man hinh', desc: 'Di chuyển góc nhìn bản vẽ' },
     { id: 'btn-ZOOM', label: '🔍 Zoom All (Z)', tags: 'zoom z all thu phong phong to toan bo', desc: 'Phóng to thu gọn toàn bộ bản vẽ' },
     { id: 'btn-TOP', label: '⬆️ Top (0°)', tags: 'top plan vtop viewtop goc nhin 0 do mat bang chuan', desc: 'Đưa góc nhìn về chuẩn 0° Top' },
@@ -4964,13 +6023,33 @@ window.addEventListener('keydown', (e) => {
       if (typeof selectedIds !== 'undefined') {
         selectedIds.clear();
         for (let ent of entities) {
-          if (ent.layer !== 'BOM_TABLE') selectedIds.add(ent.id);
+          selectedIds.add(ent.id);
         }
       }
       if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
       if (typeof setInfo === 'function') setInfo(`✅ Đã chọn tất cả (${selectedIds.size} đối tượng). Bạn có thể đổi màu trên Ribbon hoặc Bảng thuộc tính.`);
       return;
     }
+  }
+
+  // Ctrl+S / Cmd+S : Lưu nhanh bản vẽ và tiến trình vào CSDL (Quick Save)
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    if (typeof quickSaveProject === 'function') {
+      quickSaveProject(true);
+    } else if (typeof autoSaveToDB === 'function') {
+      autoSaveToDB(true, true);
+    }
+    return;
+  }
+
+  // Ctrl+O / Cmd+O : Mở file bản vẽ hoặc nạp Tool từ máy tính (Open File)
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+    e.preventDefault();
+    if (typeof openFilePicker === 'function') {
+      openFilePicker();
+    }
+    return;
   }
 
   // Ctrl+N / Cmd+N : Tạo bản vẽ mới sạch sẽ (New Drawing Sheet)
@@ -5058,7 +6137,19 @@ window.addEventListener('keydown', (e) => {
       return;
     }
 
-    // 4. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
+    // 4. Nếu đang ở Transform Tool (MOVE, COPY, ROTATE, SCALE, MIRROR)
+    const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+    if (TRANSFORM_TOOLS.includes(currentTool)) {
+      if (e) e.preventDefault();
+      if (typeof selectedIds !== 'undefined' && selectedIds.size > 0 && !isDrawing) {
+        setInfo(`✅ [${currentTool}] Đã tự động bắt nhóm ${selectedIds.size} đối tượng. Nhấp giữ chuột vào vùng chọn để kéo sang vị trí mới (thả chuột để hoàn tất)!`);
+      } else if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
+        setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước.`);
+      }
+      return;
+    }
+
+    // 5. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
     if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
       if (typeof dynamicCommands !== 'undefined' && dynamicCommands[currentTool]) {
         if (e) e.preventDefault();
@@ -5116,8 +6207,13 @@ window.addEventListener('keydown', (e) => {
 });
 
 // === js/io/json_io.js ===
-// JSON FILE MANAGEMENT (NEW / OPEN / SAVE / DRAG & DROP)
-const fileInput = document.getElementById('cad-file-input');
+// ===============================================================================
+//         VINACAD FILE MANAGEMENT ENGINE (NEW / OPEN / SAVE / DRAG & DROP)
+//   Instant 1-Click File Loader • Zero Duplicate Dialogs • Solid Debounce Guard
+// ===============================================================================
+
+let lastFilePickerOpenTime = 0;
+let isFileLoading = false;
 
 function createNewDrawing(confirmPrompt = true) {
   if (confirmPrompt && typeof entities !== 'undefined' && entities.length > 0) {
@@ -5133,59 +6229,103 @@ function createNewDrawing(confirmPrompt = true) {
   panX = 0;
   panY = 0;
   viewRotation = 0;
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
   if (typeof selectTool === 'function') selectTool('SELECT');
   if (typeof setInfo === 'function') setInfo("📄 Đã tạo bản vẽ mới sạch sẽ (Ctrl+N / Lệnh NEW). Nhập L, PL, REC hoặc APPLOAD để bắt đầu vẽ.");
   if (typeof logToCliHistory === 'function') logToCliHistory("Tạo bản vẽ mới: NEW (Ctrl+N)", "cmd");
 }
 
+/**
+ * Mở hộp thoại chọn tệp với cơ chế khóa chống mở lặp lại (Debounce 1000ms)
+ */
 function openFilePicker() {
+  const now = Date.now();
+  if (now - lastFilePickerOpenTime < 1000) {
+    return; // Chặn đúp click hoặc sự kiện nổi bọt gây mở 2 lần
+  }
+  lastFilePickerOpenTime = now;
+
+  const fileInput = document.getElementById('cad-file-input');
   if (fileInput) {
     fileInput.value = '';
     fileInput.click();
   }
 }
 
+/**
+ * Xử lý khi người dùng chọn xong file từ máy tính
+ */
 function handleFileInput(e) {
-  let file = e.target.files[0];
-  if (file) loadCadFile(file);
+  if (isFileLoading) return;
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+  isFileLoading = true;
+
+  try {
+    loadCadFile(file);
+  } finally {
+    setTimeout(() => {
+      if (e.target) e.target.value = '';
+      isFileLoading = false;
+    }, 400);
+  }
 }
 
+/**
+ * Đọc nội dung file và nạp thẳng lên Canvas hoặc nạp Plugin ngầm
+ */
 function loadCadFile(file) {
+  if (!file) return;
+  let name = file.name.toLowerCase();
+
+  // 1. Nếu là file Tool / AutoLISP / Plugin JavaScript -> Nạp thẳng chạy luôn mà không mở popup thừa
+  if (name.endsWith('.lsp') || name.endsWith('.js') || name.endsWith('.py')) {
+    if (typeof processFileList === 'function') {
+      processFileList([file], false);
+      return;
+    }
+  }
+
+  // 2. Nếu là file Bản vẽ (JSON / DXF) -> Đọc và đưa thẳng lên màn hình vẽ ngay lập tức
   let reader = new FileReader();
   reader.onload = function(evt) {
     let content = evt.target.result;
-    let name = file.name.toLowerCase();
 
     if (name.endsWith('.json') || content.trim().startsWith('[') || content.trim().startsWith('{')) {
       try {
         let parsed = JSON.parse(content);
+        let loadedEnts = [];
         if (Array.isArray(parsed)) {
-          saveState();
-          entities = parsed;
-          selectedIds.clear();
-          if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-          zoomAll();
-          setInfo(`📂 Đã nạp thành công bản vẽ từ file JSON: "${file.name}" (${entities.length} đối tượng).`);
-          return;
-        } else if (parsed.entities && Array.isArray(parsed.entities)) {
-          saveState();
-          entities = parsed.entities;
+          loadedEnts = parsed;
+        } else if (parsed && parsed.entities && Array.isArray(parsed.entities)) {
+          loadedEnts = parsed.entities;
           if (parsed.camera) {
             zoom = parsed.camera.zoom || zoom;
             panX = parsed.camera.panX || panX;
             panY = parsed.camera.panY || panY;
             if (Number.isFinite(parsed.camera.viewRotation)) viewRotation = parsed.camera.viewRotation;
           }
+        }
+
+        if (loadedEnts.length >= 0) {
+          saveState();
+          entities = loadedEnts;
           selectedIds.clear();
           if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-          zoomAll();
-          setInfo(`📂 Đã nạp thành công bản vẽ từ file JSON: "${file.name}" (${entities.length} đối tượng).`);
+          if (typeof zoomAll === 'function') zoomAll();
+          if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+          
+          let msg = `📂 Đã mở bản vẽ "${file.name}" (${entities.length} đối tượng) lên màn hình.`;
+          setInfo(msg, 'success');
+          if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
           return;
         }
       } catch (err) {
         alert("Lỗi đọc file JSON: " + err.message);
+        return;
       }
     }
 
@@ -5198,22 +6338,31 @@ function loadCadFile(file) {
             entities = dxfEnts;
             selectedIds.clear();
             if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-            zoomAll();
-            setInfo(`📂 Đã nhập thành công file DXF AutoCAD: "${file.name}" (${dxfEnts.length} đối tượng).`);
+            if (typeof zoomAll === 'function') zoomAll();
+            if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+            
+            let msg = `📂 Đã nạp thành công file DXF AutoCAD "${file.name}" (${dxfEnts.length} đối tượng).`;
+            setInfo(msg, 'success');
+            if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
             return;
           } else {
-            alert("Không tìm thấy đối tượng 2D (Line, Polyline, Circle, Text) nào trong file DXF.");
+            alert("Không tìm thấy đối tượng 2D nào trong file DXF.");
+            return;
           }
         }
       } catch (err) {
         alert("Lỗi đọc file DXF: " + err.message);
+        return;
       }
     }
+
+    alert("Định dạng file không được hỗ trợ. Hãy chọn file .json, .dxf, .lsp hoặc .js.");
   };
   reader.readAsText(file);
 }
 
-if (viewport) {
+// Thiết lập Drag & Drop vào Canvas
+if (typeof viewport !== 'undefined' && viewport) {
   viewport.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -5221,7 +6370,7 @@ if (viewport) {
 
   viewport.addEventListener('drop', (e) => {
     e.preventDefault();
-    let file = e.dataTransfer.files[0];
+    let file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) loadCadFile(file);
   });
 }

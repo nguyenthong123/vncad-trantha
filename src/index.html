@@ -2,7 +2,9 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>VinaCAD Professional Web Studio</title>
 <!-- STYLES -->
 <link rel="stylesheet" href="css/main.css" />
@@ -95,13 +97,15 @@
 
     <!-- GROUP 4: TIỆN ÍCH, APPLOAD & FILE -->
     <div class="btn-group" id="plugin-ribbon-group">
+      <button class="btn btn-save" id="btn-QUICKSAVE" onclick="quickSaveProject(true)" title="Lưu bản vẽ & tiến trình hiện tại vào CSDL (Phím tắt: Ctrl+S / Cmd+S hoặc gõ QSAVE)">💾 Lưu (Ctrl+S)</button>
       <button class="btn btn-accent" id="btn-NEW" onclick="createNewDrawing(true)" title="Tạo bản vẽ mới sạch sẽ (Phím tắt: Ctrl+N / Cmd+N hoặc gõ lệnh NEW)">📄 Mới (Ctrl+N)</button>
       <button class="btn btn-highlight" id="btn-APPLOAD" onclick="openApploadModal()" title="Quản lý và Nạp file Tool / AutoLISP mở rộng">🧩 Nạp Tool (APPLOAD) <span id="tool-count-badge" style="background:#ef4444; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; margin-left:2px;">0</span></button>
-      <button class="btn btn-accent" id="btn-OPEN" onclick="openFilePicker()">📂 Mở File (OPEN)</button>
-      <button class="btn btn-accent" id="btn-SAVE" onclick="saveJSON()">💾 Lưu JSON</button>
-      <button class="btn btn-accent" id="btn-DXF" onclick="exportDXF()">📥 Xuất DXF</button>
+      <button class="btn btn-accent" id="btn-OPEN" onclick="event.stopPropagation(); openFilePicker()" title="Mở file bản vẽ (JSON, DXF) hoặc nạp Tool (LSP, JS) từ máy tính (Phím tắt: Ctrl+O / Cmd+O hoặc gõ lệnh OPEN)">📂 Mở File (Ctrl+O)</button>
+      <button class="btn btn-accent" id="btn-SAVE" onclick="saveJSON()" title="Xuất toàn bộ bản vẽ thành file JSON">📤 Xuất JSON</button>
+      <button class="btn btn-accent" id="btn-DXF" onclick="exportDXF()" title="Xuất toàn bộ bản vẽ thành file DXF AutoCAD">📥 Xuất DXF</button>
       <button class="btn btn-ortho" id="btn-ORTHO" onclick="toggleOrtho()">📐 ORTHO (F8): <span id="ortho-status">OFF</span></button>
       <button class="btn" id="btn-DIST" onclick="selectTool('DIST')">📏 Đo (DI)</button>
+      <button class="btn" id="btn-ID" onclick="selectTool('ID')" title="Soi Tọa Độ WCS, kiểm tra vị trí Ô Trần 600x600 & Vật thể (Lệnh ID / CHECK)">🎯 Soi Tọa Độ (ID)</button>
       <button class="btn" id="btn-PAN" onclick="selectTool('PAN')">✋ Pan (P)</button>
       <button class="btn" id="btn-ZOOM" onclick="zoomAll()">🔍 Zoom All (Z)</button>
       <button class="btn" id="btn-TOP" onclick="setViewRotation(0)" title="Đưa góc nhìn về TOP (0 độ) chuẩn mặt bằng">⬆️ Top (0°)</button>
@@ -114,7 +118,7 @@
   </div>
 
   <!-- HIDDEN FILE UPLOADER FOR OPEN/IMPORT -->
-  <input type="file" id="cad-file-input" accept=".json,.dxf,.txt" style="display:none" onchange="handleFileInput(event)" />
+  <input type="file" id="cad-file-input" accept=".json,.dxf,.lsp,.js,.py,.txt" style="display:none" onchange="handleFileInput(event)" />
 
   <!-- APPLOAD MODAL DIALOG (BẢNG QUẢN LÝ & NẠP NHIỀU TOOL AUTOLISP / PLUGINS) -->
   <div id="appload-modal">
@@ -165,14 +169,11 @@
 
         <!-- Add Custom Script Panel -->
         <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px;">
-          <div style="font-weight:700; color:#fbbf24; font-size:12.5px; margin-bottom:8px;">⚡ Thêm Script AutoLISP / Plugin JavaScript Tùy Chỉnh:</div>
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <input id="new-tool-name" type="text" placeholder="Tên Tool (ví dụ: Tool Bóc Tách Tường, Chia Ô...)" style="flex:1; background:#0f172a; border:1px solid #334155; color:#f8fafc; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
-            <input id="new-tool-cmd" type="text" placeholder="Lệnh CLI (vd: MYTOOL, WALL, CUT)" style="width:180px; background:#0f172a; border:1px solid #334155; color:#38bdf8; font-family:monospace; font-weight:bold; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;" />
-          </div>
-          <textarea id="new-tool-code" placeholder="Dán nội dung mã AutoLISP hoặc JavaScript vào đây..." rows="3" style="width:100%; background:#0f172a; border:1px solid #334155; color:#4ade80; font-family:monospace; font-size:11.5px; padding:8px 10px; border-radius:4px; outline:none; resize:vertical;"></textarea>
-          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
-            <button onclick="registerCustomTool()" class="btn btn-highlight" style="padding:6px 16px;">⚡ Nạp & Lưu Tool Vào Hệ Thống</button>
+          <div style="font-weight:700; color:#fbbf24; font-size:12.5px; margin-bottom:8px;">⚡ Dán Mã AutoLISP (.lsp) / Plugin JavaScript (.js) (Tự động nhận diện lệnh & tên):</div>
+          <textarea id="new-tool-code" placeholder="Dán trực tiếp nội dung mã AutoLISP (defun c:...) hoặc JavaScript vào đây (Hệ thống sẽ tự động trích xuất mọi lệnh và tên tool mà không cần nhập tay)..." rows="4" style="width:100%; background:#0f172a; border:1px solid #334155; color:#4ade80; font-family:monospace; font-size:11.5px; padding:8px 10px; border-radius:4px; outline:none; resize:vertical;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px;">
+            <span style="font-size:11px; color:#94a3b8;">✨ Tự động nhận diện các hàm `defun c:TÊN_LỆNH`, `registerCommand`, `selectTool`</span>
+            <button onclick="registerCustomTool()" class="btn btn-highlight" style="padding:6px 18px; font-size:12px;">⚡ Nạp & Thực Thi Tool Ngay</button>
           </div>
         </div>
       </div>

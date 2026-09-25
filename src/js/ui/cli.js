@@ -36,9 +36,11 @@ const KNOWN_COMMANDS = [
   { cmd: 'LWEIGHT', aliases: ['LW'], desc: 'Đổi độ dày nét vẽ' },
   { cmd: 'LINETYPE', aliases: ['LT'], desc: 'Đổi kiểu nét (Liền/Đứt/Trục/Chấm)' },
   { cmd: 'APPLOAD', aliases: ['AP', 'TOOL', 'PLUGIN'], desc: 'Bảng Quản Lý & Nạp Plugin ngoài (.js, .lsp)' },
+  { cmd: 'QSAVE', aliases: ['SAVE', 'LUU', 'WSAVE'], desc: 'Lưu bản vẽ & tiến trình vào CSDL (Ctrl+S)' },
+  { cmd: 'SAVEAS', aliases: ['SAVEPROJECT'], desc: 'Lưu bản vẽ thành dự án mới trong CSDL' },
   { cmd: 'DXF', aliases: [], desc: 'Xuất bản vẽ ra file AutoCAD DXF' },
-  { cmd: 'SAVE', aliases: ['JSON'], desc: 'Lưu bản vẽ JSON' },
-  { cmd: 'OPEN', aliases: ['LOAD'], desc: 'Mở file bản vẽ JSON hoặc DXF' },
+  { cmd: 'JSON', aliases: ['EXPORT', 'SAVETOFILE'], desc: 'Xuất bản vẽ dạng file JSON' },
+  { cmd: 'OPEN', aliases: ['OP', 'LOAD', 'IMPORT', 'UPLOAD', 'MO', 'MOFILE', 'FILE', 'TAIFILE', 'NAPFILE'], desc: 'Mở file bản vẽ (JSON, DXF) hoặc nạp Tool (LSP, JS) (Ctrl+O)' },
   { cmd: 'ZOOM', aliases: ['Z'], desc: 'Phóng to toàn bộ bản vẽ (Zoom All)' },
   { cmd: 'PAN', aliases: ['P'], desc: 'Dời góc nhìn bản vẽ' },
   { cmd: 'TOP', aliases: ['VTOP', 'VIEWTOP', 'PLAN'], desc: 'Đưa góc nhìn về Top (0°)' },
@@ -49,6 +51,7 @@ const KNOWN_COMMANDS = [
   { cmd: 'NEW', aliases: ['QNEW', 'BANVE', 'TAOMOI'], desc: 'Tạo bản vẽ mới sạch sẽ (Ctrl+N)' },
   { cmd: 'UNDO', aliases: ['U'], desc: 'Hoàn tác thao tác trước (Ctrl+Z)' },
   { cmd: 'REDO', aliases: ['REDO', 'LAMLAI'], desc: 'Làm lại thao tác vừa hoàn tác (Ctrl+Y)' },
+  { cmd: 'ID', aliases: ['CHECK', 'INSPECT', 'TOADO', 'SOI', 'SOITOADO'], desc: 'Soi tọa độ WCS, kiểm tra ô trần 600x600 & vật thể (HUD Inspector)' },
   { cmd: 'CLEAR', aliases: ['CLS', 'RESET'], desc: 'Xóa sạch toàn bộ bản vẽ' }
 ];
 
@@ -407,7 +410,7 @@ function runCommand(rawCmd) {
     recordCommandUsage('SELECT');
     selectedIds.clear();
     for (let ent of entities) {
-      if (ent.layer !== 'BOM_TABLE') selectedIds.add(ent.id);
+      selectedIds.add(ent.id);
     }
     renderPropertiesPanel();
     setInfo(`✅ Đã chọn tất cả (${selectedIds.size} đối tượng).`);
@@ -451,6 +454,12 @@ function runCommand(rawCmd) {
   if (cmd === 'H' || cmd === 'HATCH') { recordCommandUsage('HATCH'); selectTool('HATCH'); return; }
   if (cmd === 'DI' || cmd === 'DIST') { recordCommandUsage('DIST'); selectTool('DIST'); return; }
   if (cmd === 'DT' || cmd === 'TEXT' || cmd === 'MT') { recordCommandUsage('TEXT'); selectTool('TEXT'); return; }
+  if (['ID', 'CHECK', 'INSPECT', 'TOADO', 'SOI', 'SOITOADO'].includes(cmd)) {
+    recordCommandUsage('ID');
+    selectTool('ID');
+    setInfo("🔍 [ID / CHECK] Chế độ Soi Tọa Độ & Ô Trần 600x600 kích hoạt. Di chuột hoặc nhấp để xem chi tiết.", 'info');
+    return;
+  }
 
   // Erase and Clear
   if (cmd === 'E' || cmd === 'ERASE' || cmd === 'DEL' || cmd === 'DELETE') {
@@ -466,8 +475,23 @@ function runCommand(rawCmd) {
     if (typeof createNewDrawing === 'function') createNewDrawing(args[0] !== 'FORCE');
     return;
   }
-  if (cmd === 'OPEN' || cmd === 'LOAD' || cmd === 'IMPORT' || cmd === 'UPLOAD') { recordCommandUsage('OPEN'); openFilePicker(); return; }
-  if (cmd === 'SAVE' || cmd === 'JSON' || cmd === 'EXPORT') { recordCommandUsage('SAVE'); saveJSON(); return; }
+  if (cmd === 'QSAVE' || cmd === 'SAVE' || cmd === 'LUU' || cmd === 'WSAVE') {
+    recordCommandUsage('QSAVE');
+    if (typeof quickSaveProject === 'function') quickSaveProject(true);
+    else if (typeof autoSaveToDB === 'function') autoSaveToDB(true, true);
+    return;
+  }
+  if (cmd === 'SAVEAS' || cmd === 'SAVEPROJECT') {
+    recordCommandUsage('SAVEAS');
+    if (typeof saveProjectAsNewToDB === 'function') saveProjectAsNewToDB(args.join(' '));
+    return;
+  }
+  if (cmd === 'OPEN' || cmd === 'OP' || cmd === 'LOAD' || cmd === 'IMPORT' || cmd === 'UPLOAD' || cmd === 'MO' || cmd === 'MOFILE' || cmd === 'FILE' || cmd === 'TAIFILE' || cmd === 'NAPFILE') {
+    recordCommandUsage('OPEN');
+    openFilePicker();
+    return;
+  }
+  if (cmd === 'JSON' || cmd === 'EXPORT' || cmd === 'SAVETOFILE') { recordCommandUsage('JSON'); saveJSON(); return; }
   if (cmd === 'DXF') { recordCommandUsage('DXF'); exportDXF(); return; }
 
   // Utilities

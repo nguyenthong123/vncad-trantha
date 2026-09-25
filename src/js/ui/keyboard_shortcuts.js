@@ -55,13 +55,33 @@ window.addEventListener('keydown', (e) => {
       if (typeof selectedIds !== 'undefined') {
         selectedIds.clear();
         for (let ent of entities) {
-          if (ent.layer !== 'BOM_TABLE') selectedIds.add(ent.id);
+          selectedIds.add(ent.id);
         }
       }
       if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
       if (typeof setInfo === 'function') setInfo(`✅ Đã chọn tất cả (${selectedIds.size} đối tượng). Bạn có thể đổi màu trên Ribbon hoặc Bảng thuộc tính.`);
       return;
     }
+  }
+
+  // Ctrl+S / Cmd+S : Lưu nhanh bản vẽ và tiến trình vào CSDL (Quick Save)
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    if (typeof quickSaveProject === 'function') {
+      quickSaveProject(true);
+    } else if (typeof autoSaveToDB === 'function') {
+      autoSaveToDB(true, true);
+    }
+    return;
+  }
+
+  // Ctrl+O / Cmd+O : Mở file bản vẽ hoặc nạp Tool từ máy tính (Open File)
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+    e.preventDefault();
+    if (typeof openFilePicker === 'function') {
+      openFilePicker();
+    }
+    return;
   }
 
   // Ctrl+N / Cmd+N : Tạo bản vẽ mới sạch sẽ (New Drawing Sheet)
@@ -149,7 +169,19 @@ window.addEventListener('keydown', (e) => {
       return;
     }
 
-    // 4. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
+    // 4. Nếu đang ở Transform Tool (MOVE, COPY, ROTATE, SCALE, MIRROR)
+    const TRANSFORM_TOOLS = ['MOVE', 'COPY', 'ROTATE', 'SCALE', 'MIRROR'];
+    if (TRANSFORM_TOOLS.includes(currentTool)) {
+      if (e) e.preventDefault();
+      if (typeof selectedIds !== 'undefined' && selectedIds.size > 0 && !isDrawing) {
+        setInfo(`✅ [${currentTool}] Đã tự động bắt nhóm ${selectedIds.size} đối tượng. Nhấp giữ chuột vào vùng chọn để kéo sang vị trí mới (thả chuột để hoàn tất)!`);
+      } else if (typeof selectedIds !== 'undefined' && selectedIds.size === 0) {
+        setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước.`);
+      }
+      return;
+    }
+
+    // 5. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
     if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
       if (typeof dynamicCommands !== 'undefined' && dynamicCommands[currentTool]) {
         if (e) e.preventDefault();

@@ -1,17 +1,20 @@
 // AUTOCAD GEOMETRY TRANSFORMATIONS & MODIFY ENGINES
 function translateEntity(e, dx, dy) {
   let c = JSON.parse(JSON.stringify(e));
-  if (c.p1) { c.p1[0] += dx; c.p1[1] += dy; c.p2[0] += dx; c.p2[1] += dy; }
-  if (c.x !== undefined) { c.x += dx; c.y += dy; }
-  if (c.cx !== undefined) { c.cx += dx; c.cy += dy; }
+  if (c.p1) { c.p1[0] += dx; c.p1[1] += dy; }
+  if (c.p2) { c.p2[0] += dx; c.p2[1] += dy; }
+  if (c.x !== undefined) c.x += dx;
+  if (c.y !== undefined) c.y += dy;
+  if (c.cx !== undefined) c.cx += dx;
+  if (c.cy !== undefined) c.cy += dy;
   if (c.points) c.points = c.points.map(p => [p[0] + dx, p[1] + dy]);
-  if (c.pts) c.pts = c.pts.map(p => ({ x: p.x + dx, y: p.y + dy }));
+  if (c.pts) c.pts = c.pts.map(p => ({ x: (p.x !== undefined ? p.x : p[0]) + dx, y: (p.y !== undefined ? p.y : p[1]) + dy }));
   return c;
 }
 
 function cloneEntity(e, dx, dy) {
   let c = translateEntity(e, dx, dy);
-  c.id = 'ent_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  c.id = 'ent_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
   return c;
 }
 
@@ -24,19 +27,23 @@ function rotateEntity(e, origin, angRad) {
       origin.y + rx * Math.sin(angRad) + ry * Math.cos(angRad)
     ];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let r1 = rotPt(c.p1[0], c.p1[1]), r2 = rotPt(c.p2[0], c.p2[1]);
     c.p1 = r1; c.p2 = r2;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let rc = rotPt(c.cx, c.cy);
     c.cx = rc[0]; c.cy = rc[1];
   }
-  if (c.x !== undefined) {
+  if (c.x !== undefined && c.y !== undefined) {
     let rc = rotPt(c.x, c.y);
     c.x = rc[0]; c.y = rc[1];
   }
   if (c.points) c.points = c.points.map(p => rotPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let r = rotPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: r[0], y: r[1] };
+  });
   return c;
 }
 
@@ -45,21 +52,29 @@ function scaleEntity(e, origin, factor) {
   function scPt(x, y) {
     return [origin.x + (x - origin.x) * factor, origin.y + (y - origin.y) * factor];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let s1 = scPt(c.p1[0], c.p1[1]), s2 = scPt(c.p2[0], c.p2[1]);
     c.p1 = s1; c.p2 = s2;
   }
-  if (c.x !== undefined && c.w !== undefined) {
+  if (c.x !== undefined && c.y !== undefined) {
     let s = scPt(c.x, c.y);
-    c.x = s[0]; c.y = s[1]; c.w *= factor; c.h *= factor;
+    c.x = s[0]; c.y = s[1];
+    if (c.w !== undefined) c.w *= factor;
+    if (c.h !== undefined) c.h *= factor;
+    if (c.size !== undefined) c.size *= factor;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let sc = scPt(c.cx, c.cy);
     c.cx = sc[0]; c.cy = sc[1];
     if (c.r) c.r *= factor;
-    if (c.rx) { c.rx *= factor; c.ry *= factor; }
+    if (c.rx) c.rx *= factor;
+    if (c.ry) c.ry *= factor;
   }
   if (c.points) c.points = c.points.map(p => scPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let s = scPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: s[0], y: s[1] };
+  });
   return c;
 }
 
@@ -73,15 +88,23 @@ function mirrorEntity(e, p1, p2) {
     let px = p1.x + u * dx, py = p1.y + u * dy;
     return [2 * px - x, 2 * py - y];
   }
-  if (c.p1) {
+  if (c.p1 && c.p2) {
     let m1 = mirPt(c.p1[0], c.p1[1]), m2 = mirPt(c.p2[0], c.p2[1]);
     c.p1 = m1; c.p2 = m2;
   }
-  if (c.cx !== undefined) {
+  if (c.cx !== undefined && c.cy !== undefined) {
     let mc = mirPt(c.cx, c.cy);
     c.cx = mc[0]; c.cy = mc[1];
   }
+  if (c.x !== undefined && c.y !== undefined) {
+    let mc = mirPt(c.x, c.y);
+    c.x = mc[0]; c.y = mc[1];
+  }
   if (c.points) c.points = c.points.map(p => mirPt(p[0], p[1]));
+  if (c.pts) c.pts = c.pts.map(p => {
+    let m = mirPt(p.x !== undefined ? p.x : p[0], p.y !== undefined ? p.y : p[1]);
+    return { x: m[0], y: m[1] };
+  });
   return c;
 }
 

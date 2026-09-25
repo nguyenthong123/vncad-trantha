@@ -1,6 +1,6 @@
 // ===============================================================================
 //           VINACAD DATABASE ENGINE (INDEXEDDB PERSISTENCE LAYER)
-//   Real-Time Auto-Save • Zero Data Loss • Project Storage • Fast Restoration
+//   Real-Time Auto-Save • Zero Data Loss • Manual Quick Save • Fast Restoration
 //   Persistent Command Transaction Logging & Priority State Journal
 // ===============================================================================
 
@@ -15,6 +15,8 @@ const STORE_PLUGINS = 'custom_plugins';
 let dbInstance = null;
 let isDbReady = false;
 let autoSaveTimer = null;
+let autoSaveDaemonInterval = null;
+let lastSavedSignature = '';
 let currentProject = {
   id: 'default_project',
   name: 'Bản vẽ Hiện tại',
@@ -102,6 +104,7 @@ function initVinaCAD_DB(callback) {
   if (!window.indexedDB) {
     console.warn("⚠️ Trình duyệt không hỗ trợ IndexedDB. Sử dụng LocalStorage dự phòng.");
     initLocalStorageFallback();
+    startAutoSaveDaemon();
     if (callback) callback();
     return;
   }
@@ -152,40 +155,68 @@ function initVinaCAD_DB(callback) {
     if (typeof restorePluginsFromDB === 'function') {
       restorePluginsFromDB();
     }
+
+    // Khởi động tiến trình tự động lưu ngầm định kỳ
+    startAutoSaveDaemon();
   };
 
   request.onerror = function(event) {
     console.error("❌ Lỗi mở IndexedDB:", event.target.error);
     initLocalStorageFallback();
+    startAutoSaveDaemon();
     if (callback) callback();
   };
 }
 
-// 2. Tự Động Lưu (Real-Time Debounced Auto-Save)
-function autoSaveToDB(immediate = false) {
-  updateDbStatusUI('saving', '⏳ CSDL: Đang lưu...');
+/**
+ * Tạo chữ ký (signature) nhận diện trạng thái bản vẽ để phát hiện thay đổi
+ */
+function getDrawingSignature() {
+  const entCount = typeof entities !== 'undefined' ? entities.length : 0;
+  const undoCount = typeof undoStack !== 'undefined' ? undoStack.length : 0;
+  const lastEntId = entCount > 0 ? (entities[entCount - 1].id || '') : '';
+  const camStr = `${Math.round((typeof zoom !== 'undefined' ? zoom : 1) * 1000)}_${Math.round(typeof panX !== 'undefined' ? panX : 0)}_${Math.round(typeof panY !== 'undefined' ? panY : 0)}`;
+  return `${entCount}_${undoCount}_${lastEntId}_${camStr}`;
+}
 
+// 2. Tự Động Lưu (Real-Time Debounced & Periodic Background Auto-Save)
+function autoSaveToDB(immediate = false, isManual = false) {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
   }
 
   const performSave = () => {
+    const currentSig = getDrawingSignature();
+    const timeStr = new Date().toLocaleTimeString('vi-VN');
+
+    // Lưu tối đa 30 bước undo gần nhất để giảm dung lượng nhưng vẫn bảo toàn lịch sử
+    const compactUndo = typeof undoStack !== 'undefined' ? undoStack.slice(-30) : [];
+    const compactRedo = typeof redoStack !== 'undefined' ? redoStack.slice(-30) : [];
+
     const drawingPayload = {
       id: 'current_active_canvas',
       projectId: currentProject.id,
       projectName: currentProject.name,
-      entities: entities,
-      activeProperties: activeProperties,
+      entities: typeof entities !== 'undefined' ? entities : [],
+      undoStack: compactUndo,
+      redoStack: compactRedo,
+      activeProperties: typeof activeProperties !== 'undefined' ? activeProperties : {},
+      orthoMode: typeof orthoMode !== 'undefined' ? orthoMode : false,
       activeTaskContext: window.activeTaskContext,
       camera: {
-        zoom: zoom,
-        panX: panX,
-        panY: panY,
-        viewRotation: viewRotation
+        zoom: typeof zoom !== 'undefined' ? zoom : 0.08,
+        panX: typeof panX !== 'undefined' ? panX : 0,
+        panY: typeof panY !== 'undefined' ? panY : 0,
+        viewRotation: typeof viewRotation !== 'undefined' ? viewRotation : 0
       },
-      entityCount: entities.length,
+      lastExecutedCommand: window.lastExecutedCommand || (typeof lastExecutedCommand !== 'undefined' ? lastExecutedCommand : null),
+      entityCount: typeof entities !== 'undefined' ? entities.length : 0,
+      saveType: isManual ? 'MANUAL' : 'AUTO',
       updatedAt: Date.now()
     };
+
+    lastSavedSignature = currentSig;
 
     if (isDbReady && dbInstance) {
       try {
@@ -194,11 +225,16 @@ function autoSaveToDB(immediate = false) {
         const req = store.put(drawingPayload);
 
         req.onsuccess = function() {
-          updateDbStatusUI('saved', `🟢 CSDL: Đã lưu (${entities.length} nét)`);
+          const count = drawingPayload.entityCount;
+          if (isManual) {
+            updateDbStatusUI('saved', `🟢 Đã lưu lúc ${timeStr} (${count} nét)`);
+          } else {
+            updateDbStatusUI('saved', `🟢 Tự động lưu lúc ${timeStr} (${count} nét)`);
+          }
         };
 
         req.onerror = function(e) {
-          console.warn("⚠️ Lỗi ghi IndexedDB, lưu sang LocalStorage:", e);
+          console.warn("⚠️ Lỗi ghi IndexedDB, chuyển sang LocalStorage:", e);
           saveToLocalStorageFallback(drawingPayload);
         };
       } catch (err) {
@@ -212,11 +248,101 @@ function autoSaveToDB(immediate = false) {
   if (immediate) {
     performSave();
   } else {
+    updateDbStatusUI('saving', '⏳ CSDL: Đang lưu...');
     autoSaveTimer = setTimeout(performSave, 250); // Debounce 250ms
   }
 }
 
-// 3. Phục Hồi Bản Vẽ Từ Cơ Sở Dữ Liệu
+/**
+ * ⚡ NÚT LƯU NHANH THỦ CÔNG (Manual Quick Save - QSAVE / Ctrl+S)
+ * Đảm bảo 100% bản vẽ, tiến trình hiện tại và snapshot được lưu ngay lập tức
+ */
+function quickSaveProject(manual = true) {
+  // 1. Thực hiện lưu khẩn cấp tức thì vào CSDL Active
+  autoSaveToDB(true, manual);
+
+  const timeStr = new Date().toLocaleTimeString('vi-VN');
+  const count = typeof entities !== 'undefined' ? entities.length : 0;
+
+  // 2. Lưu thêm 1 Snapshot vào lịch sử CSDL
+  if (isDbReady && dbInstance && count > 0) {
+    try {
+      const snapPayload = {
+        timestamp: Date.now(),
+        timeStr: timeStr,
+        projectName: currentProject.name,
+        entityCount: count,
+        entities: JSON.parse(JSON.stringify(entities)),
+        camera: { zoom, panX, panY, viewRotation }
+      };
+      const tx = dbInstance.transaction([STORE_SNAPSHOTS], 'readwrite');
+      tx.objectStore(STORE_SNAPSHOTS).put(snapPayload);
+    } catch (e) {}
+  }
+
+  // 3. Hiệu ứng Visual Feedback trên nút Ribbon
+  const saveBtn = document.getElementById('btn-QUICKSAVE');
+  if (saveBtn) {
+    saveBtn.classList.remove('saved-pulse');
+    void saveBtn.offsetWidth; // Trigger reflow
+    saveBtn.classList.add('saved-pulse');
+    const oldText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '✅ Đã lưu!';
+    setTimeout(() => {
+      saveBtn.innerHTML = oldText;
+      saveBtn.classList.remove('saved-pulse');
+    }, 1500);
+  }
+
+  // 4. Cập nhật HUD & CLI Thông báo
+  updateDbStatusUI('saved', `🟢 Đã lưu lúc ${timeStr} (${count} nét)`);
+  if (typeof setInfo === 'function') {
+    setInfo(`💾 Đã lưu thành công bản vẽ "${currentProject.name}" (${count} đối tượng) vào CSDL an toàn!`, 'success');
+  }
+  if (typeof logToCliHistory === 'function') {
+    logToCliHistory(`[QSAVE] ${timeStr}: Đã lưu an toàn ${count} đối tượng & tiến trình làm việc vào CSDL.`, 'success');
+  }
+
+  return true;
+}
+
+window.quickSaveProject = quickSaveProject;
+window.autoSaveToDB = autoSaveToDB;
+
+/**
+ * 🔄 TIẾN TRÌNH TỰ ĐỘNG LƯU ĐỊNH KỲ (Background Auto-Save Daemon)
+ * Tự động chạy lưu ngầm mỗi 3 giây nếu người dùng không bấm nút lưu
+ */
+function startAutoSaveDaemon() {
+  if (autoSaveDaemonInterval) clearInterval(autoSaveDaemonInterval);
+
+  autoSaveDaemonInterval = setInterval(() => {
+    const currentSig = getDrawingSignature();
+    // Nếu có sự thay đổi chưa được ghi vào CSDL thì tự động lưu ngay
+    if (currentSig !== lastSavedSignature) {
+      autoSaveToDB(false, false);
+    }
+  }, 3000); // 3 giây kiểm tra và lưu ngầm 1 lần
+}
+
+// Bắt các sự kiện đóng tab, ẩn tab, chuyển cửa sổ để lưu tức thì chống mất dữ liệu
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    autoSaveToDB(true, false);
+  });
+  window.addEventListener('pagehide', () => {
+    autoSaveToDB(true, false);
+  });
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        autoSaveToDB(true, false);
+      }
+    });
+  }
+}
+
+// 3. Phục Hồi Bản Vẽ Từ Cơ Sở Dữ Liệu Khi Khởi Động
 function restoreActiveCanvasFromDB(callback) {
   if (isDbReady && dbInstance) {
     try {
@@ -225,21 +351,39 @@ function restoreActiveCanvasFromDB(callback) {
       const req = store.get('current_active_canvas');
 
       req.onsuccess = function() {
-        if (req.result && req.result.entities && req.result.entities.length > 0) {
-          entities = req.result.entities;
-          if (req.result.activeProperties) activeProperties = { ...activeProperties, ...req.result.activeProperties };
-          if (req.result.activeTaskContext) window.activeTaskContext = req.result.activeTaskContext;
-          if (req.result.camera) {
-            zoom = req.result.camera.zoom || zoom;
-            panX = req.result.camera.panX || panX;
-            panY = req.result.camera.panY || panY;
-            if (Number.isFinite(req.result.camera.viewRotation)) viewRotation = req.result.camera.viewRotation;
+        const res = req.result;
+        if (res && res.entities && res.entities.length > 0) {
+          entities = res.entities;
+          if (Array.isArray(res.undoStack) && res.undoStack.length > 0) undoStack = res.undoStack;
+          if (Array.isArray(res.redoStack)) redoStack = res.redoStack;
+          if (res.activeProperties) activeProperties = { ...activeProperties, ...res.activeProperties };
+          if (typeof res.orthoMode === 'boolean') {
+            orthoMode = res.orthoMode;
+            const orthoBtn = document.getElementById('btn-ORTHO');
+            const orthoStatus = document.getElementById('ortho-status');
+            if (orthoBtn) orthoBtn.classList.toggle('active', orthoMode);
+            if (orthoStatus) orthoStatus.innerText = orthoMode ? 'ON' : 'OFF';
           }
-          if (req.result.projectName) currentProject.name = req.result.projectName;
+          if (res.activeTaskContext) window.activeTaskContext = res.activeTaskContext;
+          if (res.camera) {
+            zoom = res.camera.zoom || zoom;
+            panX = res.camera.panX || panX;
+            panY = res.camera.panY || panY;
+            if (Number.isFinite(res.camera.viewRotation)) viewRotation = res.camera.viewRotation;
+          }
+          if (res.projectName) currentProject.name = res.projectName;
+          if (res.lastExecutedCommand) {
+            window.lastExecutedCommand = res.lastExecutedCommand;
+            lastExecutedCommand = res.lastExecutedCommand;
+          }
 
-          console.log(`✨ Đã phục hồi ${entities.length} đối tượng từ CSDL.`);
-          updateDbStatusUI('saved', `🟢 CSDL: Đã nạp (${entities.length} nét)`);
-          setInfo(`✨ CSDL: Đã tự động phục hồi bản vẽ "${currentProject.name}" (${entities.length} đối tượng).`);
+          lastSavedSignature = getDrawingSignature();
+          console.log(`✨ Đã phục hồi ${entities.length} đối tượng & tiến trình từ CSDL.`);
+          const savedTime = res.updatedAt ? new Date(res.updatedAt).toLocaleTimeString('vi-VN') : '';
+          updateDbStatusUI('saved', `🟢 CSDL: Đã nạp (${entities.length} nét${savedTime ? ' - ' + savedTime : ''})`);
+          if (typeof setInfo === 'function') {
+            setInfo(`✨ CSDL: Đã tự động phục hồi bản vẽ "${currentProject.name}" (${entities.length} đối tượng).`);
+          }
         } else {
           // Thử nạp từ LocalStorage fallback
           restoreFromLocalStorageFallback();
@@ -277,7 +421,10 @@ function saveProjectAsNewToDB(projectName) {
     id: projectId,
     name: projectName,
     entities: entities,
+    undoStack: typeof undoStack !== 'undefined' ? undoStack.slice(-30) : [],
+    redoStack: typeof redoStack !== 'undefined' ? redoStack.slice(-30) : [],
     activeProperties: activeProperties,
+    orthoMode: orthoMode,
     camera: { zoom, panX, panY, viewRotation },
     entityCount: entities.length,
     createdAt: Date.now(),
@@ -330,7 +477,10 @@ function loadProjectByIdFromDB(projectId) {
     if (p && p.entities) {
       saveState();
       entities = p.entities;
+      if (Array.isArray(p.undoStack)) undoStack = p.undoStack;
+      if (Array.isArray(p.redoStack)) redoStack = p.redoStack;
       if (p.activeProperties) activeProperties = { ...activeProperties, ...p.activeProperties };
+      if (typeof p.orthoMode === 'boolean') orthoMode = p.orthoMode;
       if (p.camera) {
         zoom = p.camera.zoom || zoom;
         panX = p.camera.panX || panX;
@@ -339,7 +489,7 @@ function loadProjectByIdFromDB(projectId) {
       }
       currentProject = { id: p.id, name: p.name, createdAt: p.createdAt };
       selectedIds.clear();
-      autoSaveToDB(true);
+      quickSaveProject(true);
       if (typeof zoomAll === 'function') zoomAll();
       setInfo(`📂 Đã mở dự án "${p.name}" từ CSDL (${p.entities.length} đối tượng).`);
     }
@@ -354,7 +504,8 @@ function initLocalStorageFallback() {
 function saveToLocalStorageFallback(payload) {
   try {
     localStorage.setItem('vinacad_active_canvas', JSON.stringify(payload));
-    updateDbStatusUI('saved', `🟢 CSDL Local: Đã lưu (${entities.length} nét)`);
+    const timeStr = new Date().toLocaleTimeString('vi-VN');
+    updateDbStatusUI('saved', `🟢 CSDL Local: Đã lưu (${entities.length} nét - ${timeStr})`);
   } catch (e) {
     updateDbStatusUI('error', '⚠️ Bộ nhớ đầy');
   }
@@ -367,7 +518,10 @@ function restoreFromLocalStorageFallback() {
       const data = JSON.parse(raw);
       if (data && data.entities && data.entities.length > 0) {
         entities = data.entities;
+        if (Array.isArray(data.undoStack)) undoStack = data.undoStack;
+        if (Array.isArray(data.redoStack)) redoStack = data.redoStack;
         if (data.activeProperties) activeProperties = { ...activeProperties, ...data.activeProperties };
+        if (typeof data.orthoMode === 'boolean') orthoMode = data.orthoMode;
         if (data.camera) {
           zoom = data.camera.zoom || zoom;
           panX = data.camera.panX || panX;
@@ -375,6 +529,7 @@ function restoreFromLocalStorageFallback() {
           if (Number.isFinite(data.camera.viewRotation)) viewRotation = data.camera.viewRotation;
         }
         if (data.projectName) currentProject.name = data.projectName;
+        lastSavedSignature = getDrawingSignature();
         updateDbStatusUI('saved', `🟢 CSDL Local: Đã nạp (${entities.length} nét)`);
       }
     }

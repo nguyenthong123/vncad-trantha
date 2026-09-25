@@ -35,6 +35,16 @@ function animate() {
     drawSelectionBox();
   }
 
+  // Draw Coordinate & Cell Inspector Overlay (ID / CHECK tool)
+  if (typeof drawInspectorOverlay === 'function') {
+    drawInspectorOverlay();
+  }
+
+  // Draw High-Precision AutoCAD OSNAP Visual Marker & Glyph
+  if (typeof drawOsnapGlyph === 'function') {
+    drawOsnapGlyph();
+  }
+
   if (typeof drawCrosshair === 'function') {
     drawCrosshair();
   }

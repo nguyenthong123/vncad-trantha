@@ -237,6 +237,8 @@ html, body {
     width: 100% !important;
     height: 100% !important;
     background: #070a13 !important;
+    touch-action: none !important;
+    -webkit-touch-callout: none !important;
 }
 .gradio-container {
     max-width: 100% !important;
@@ -245,6 +247,7 @@ html, body {
     margin: 0 !important;
     background: #070a13 !important;
     overflow: hidden !important;
+    touch-action: none !important;
 }
 .contain, .block, #component-0 {
     max-width: 100% !important;
@@ -252,13 +255,14 @@ html, body {
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
+    touch-action: none !important;
 }
 footer { display: none !important; }
 """
 
 def create_app():
     with gr.Blocks(title="VinaCAD Professional Web Studio", theme=gr.themes.Base(), css=custom_css) as demo:
-        gr.HTML(f'<iframe srcdoc="{escaped_html}" style="width:100%; height:100vh; border:none; margin:0; padding:0; display:block; overflow:hidden; position:fixed; inset:0;" allow="fullscreen"></iframe>')
+        gr.HTML(f'<iframe srcdoc="{escaped_html}" style="width:100%; height:100vh; border:none; margin:0; padding:0; display:block; overflow:hidden; position:fixed; inset:0; touch-action:none;" allow="fullscreen"></iframe>')
     return demo
 
 if __name__ == "__main__":

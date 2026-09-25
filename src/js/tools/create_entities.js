@@ -51,7 +51,7 @@ function finishDrawingWithPoint(targetPt) {
   } else if (currentTool === 'MOVE') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
     entities = entities.map(e => selectedIds.has(e.id) ? translateEntity(e, dx, dy) : e);
-    setInfo(`✥ Đã dời đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`);
+    setInfo(`✥ Đã dời ${selectedIds.size} đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`);
     selectTool('SELECT');
   } else if (currentTool === 'COPY') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
@@ -70,8 +70,7 @@ function finishDrawingWithPoint(targetPt) {
     setInfo(`🔄 Đã xoay đối tượng ${(angRad * 180 / Math.PI).toFixed(1)}° quanh điểm gốc.`);
     selectTool('SELECT');
   } else if (currentTool === 'SCALE') {
-    let d = Math.hypot(targetPt.x - startPoint.x, targetPt.y - startPoint.y);
-    let factor = Math.max(d / 500, 0.1);
+    let factor = targetPt.customScaleFactor !== undefined ? targetPt.customScaleFactor : (Math.hypot(targetPt.x - startPoint.x, targetPt.y - startPoint.y) / 100 || 1);
     entities = entities.map(e => selectedIds.has(e.id) ? scaleEntity(e, startPoint, factor) : e);
     setInfo(`📐 Đã Scale đối tượng tỉ lệ ${factor.toFixed(2)}x.`);
     selectTool('SELECT');
@@ -92,19 +91,38 @@ function handleDynInputSubmit() {
   let valStr = dynInput.value.trim() || dynInput.placeholder.replace(' mm', '').trim();
   let val = parseFloat(valStr);
 
-  if (!isFinite(val) || val <= 0) {
+  if (!isFinite(val)) {
     if (isDrawing && startPoint) finishDrawingWithPoint(mouseWorld);
     return;
   }
 
   if (currentTool === 'OFFSET') {
-    offsetDist = val;
+    if (val > 0) offsetDist = val;
     setInfo(`⚡ Khoảng cách Offset mới: ${offsetDist} mm. Hãy nhấp nét để offset.`);
     dynBox.style.display = 'none';
     return;
   }
 
   if (!isDrawing || !startPoint) return;
+
+  if (currentTool === 'ROTATE') {
+    let angRad = val * Math.PI / 180;
+    let targetPt = { x: startPoint.x + Math.cos(angRad) * 100, y: startPoint.y + Math.sin(angRad) * 100 };
+    finishDrawingWithPoint(targetPt);
+    return;
+  }
+
+  if (currentTool === 'SCALE') {
+    if (val <= 0) val = 1;
+    let targetPt = { x: startPoint.x + 100, y: startPoint.y, customScaleFactor: val };
+    finishDrawingWithPoint(targetPt);
+    return;
+  }
+
+  if (val <= 0) {
+    finishDrawingWithPoint(mouseWorld);
+    return;
+  }
 
   let activeEnd = applyOrthoPoint(startPoint, mouseWorld);
   let dx = activeEnd.x - startPoint.x, dy = activeEnd.y - startPoint.y;

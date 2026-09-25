@@ -65,6 +65,9 @@ let boxStartWorld = { x: 0, y: 0 };
 let isMouseDown = false;
 let mouseDownScreen = { x: 0, y: 0 };
 let mouseDownWorld = { x: 0, y: 0 };
+let isDragMoving = false;
+let dragStartScreen = { x: 0, y: 0 };
+let activeSnapPoint = null; // High-precision OSNAP point ({ x, y, type, desc, entityId })
 
 // Basic State Functions
 function setInfo(msg, type = 'info') {
@@ -79,8 +82,20 @@ function saveState() {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  undoStack.push(JSON.stringify(snapshot));
-  if (undoStack.length > 50) undoStack.shift();
+  const serialized = JSON.stringify(snapshot);
+
+  // Tránh lưu các snapshot trùng lặp nếu chưa có sự thay đổi hình học thực sự
+  if (undoStack.length > 0) {
+    try {
+      const topState = JSON.parse(undoStack[undoStack.length - 1]);
+      if (topState && JSON.stringify(topState.entities) === JSON.stringify(snapshot.entities)) {
+        return;
+      }
+    } catch (e) {}
+  }
+
+  undoStack.push(serialized);
+  if (undoStack.length > 150) undoStack.shift();
   redoStack = [];
 
   // Tự động lưu ngay lập tức vào Cơ Sở Dữ Liệu IndexedDB
@@ -91,40 +106,58 @@ function saveState() {
 
 function undoAction() {
   if (undoStack.length === 0) {
-    setInfo("⚠️ Không còn thao tác nào để Undo.");
+    setInfo("⚠️ Không còn thao tác nào để Undo (đang ở bước đầu tiên).");
     return;
   }
+
   const currentSnapshot = {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  redoStack.push(JSON.stringify(currentSnapshot));
+  const currentEntitiesStr = JSON.stringify(entities);
 
-  let raw = undoStack.pop();
-  try {
-    let state = JSON.parse(raw);
-    if (Array.isArray(state)) {
-      entities = state;
-    } else if (state && state.entities) {
-      entities = state.entities;
-      if (state.camera) {
-        zoom = state.camera.zoom ?? zoom;
-        panX = state.camera.panX ?? panX;
-        panY = state.camera.panY ?? panY;
-        if (Number.isFinite(state.camera.viewRotation)) {
-          viewRotation = state.camera.viewRotation;
-        }
+  let state = null;
+  // Lùi từng bước và bỏ qua các snapshot trùng lặp để đảm bảo mỗi lần Undo lùi đúng 1 bước thay đổi
+  while (undoStack.length > 0) {
+    let raw = undoStack.pop();
+    try {
+      let parsed = JSON.parse(raw);
+      let targetEntities = Array.isArray(parsed) ? parsed : (parsed && parsed.entities ? parsed.entities : null);
+      if (targetEntities && JSON.stringify(targetEntities) !== currentEntitiesStr) {
+        state = parsed;
+        break;
+      }
+    } catch (e) {
+      console.error("Lỗi parse undo snapshot:", e);
+    }
+  }
+
+  if (!state) {
+    setInfo("⚠️ Không còn thao tác trước đó để Undo.");
+    return;
+  }
+
+  redoStack.push(JSON.stringify(currentSnapshot));
+  if (redoStack.length > 150) redoStack.shift();
+
+  if (Array.isArray(state)) {
+    entities = state;
+  } else if (state && state.entities) {
+    entities = state.entities;
+    if (state.camera) {
+      zoom = state.camera.zoom ?? zoom;
+      panX = state.camera.panX ?? panX;
+      panY = state.camera.panY ?? panY;
+      if (Number.isFinite(state.camera.viewRotation)) {
+        viewRotation = state.camera.viewRotation;
       }
     }
-  } catch (e) {
-    console.error("Lỗi undo:", e);
   }
 
   selectedIds.clear();
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
-  if (typeof logCommandTransaction === 'function') logCommandTransaction('UNDO', 'EXECUTED');
-  setInfo("↩️ Đã hoàn tác (Undo) thao tác trước.");
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+  setInfo(`↩️ Đã hoàn tác (Undo) 1 bước (${entities.length} đối tượng, còn ${undoStack.length} bước).`);
 }
 
 function redoAction() {
@@ -132,38 +165,59 @@ function redoAction() {
     setInfo("⚠️ Không còn thao tác nào để Redo.");
     return;
   }
+
   const currentSnapshot = {
     entities: JSON.parse(JSON.stringify(entities)),
     camera: { zoom, panX, panY, viewRotation }
   };
-  undoStack.push(JSON.stringify(currentSnapshot));
+  const currentEntitiesStr = JSON.stringify(entities);
 
-  let raw = redoStack.pop();
-  try {
-    let state = JSON.parse(raw);
-    if (Array.isArray(state)) {
-      entities = state;
-    } else if (state && state.entities) {
-      entities = state.entities;
-      if (state.camera) {
-        zoom = state.camera.zoom ?? zoom;
-        panX = state.camera.panX ?? panX;
-        panY = state.camera.panY ?? panY;
-        if (Number.isFinite(state.camera.viewRotation)) {
-          viewRotation = state.camera.viewRotation;
-        }
+  let state = null;
+  while (redoStack.length > 0) {
+    let raw = redoStack.pop();
+    try {
+      let parsed = JSON.parse(raw);
+      let targetEntities = Array.isArray(parsed) ? parsed : (parsed && parsed.entities ? parsed.entities : null);
+      if (targetEntities && JSON.stringify(targetEntities) !== currentEntitiesStr) {
+        state = parsed;
+        break;
+      }
+    } catch (e) {
+      console.error("Lỗi parse redo snapshot:", e);
+    }
+  }
+
+  if (!state) {
+    setInfo("⚠️ Không còn thao tác để Redo.");
+    return;
+  }
+
+  undoStack.push(JSON.stringify(currentSnapshot));
+  if (undoStack.length > 150) undoStack.shift();
+
+  if (Array.isArray(state)) {
+    entities = state;
+  } else if (state && state.entities) {
+    entities = state.entities;
+    if (state.camera) {
+      zoom = state.camera.zoom ?? zoom;
+      panX = state.camera.panX ?? panX;
+      panY = state.camera.panY ?? panY;
+      if (Number.isFinite(state.camera.viewRotation)) {
+        viewRotation = state.camera.viewRotation;
       }
     }
-  } catch (e) {
-    console.error("Lỗi redo:", e);
   }
 
   selectedIds.clear();
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
-  if (typeof logCommandTransaction === 'function') logCommandTransaction('REDO', 'EXECUTED');
-  setInfo("↪️ Đã làm lại (Redo) thao tác.");
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+  setInfo(`↪️ Đã làm lại (Redo) 1 bước (${entities.length} đối tượng, còn ${redoStack.length} bước).`);
 }
+
+window.saveState = saveState;
+window.undoAction = undoAction;
+window.redoAction = redoAction;
 
 function toggleOrtho() {
   orthoMode = !orthoMode;

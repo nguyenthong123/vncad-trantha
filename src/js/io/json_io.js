@@ -1,5 +1,10 @@
-// JSON FILE MANAGEMENT (NEW / OPEN / SAVE / DRAG & DROP)
-const fileInput = document.getElementById('cad-file-input');
+// ===============================================================================
+//         VINACAD FILE MANAGEMENT ENGINE (NEW / OPEN / SAVE / DRAG & DROP)
+//   Instant 1-Click File Loader • Zero Duplicate Dialogs • Solid Debounce Guard
+// ===============================================================================
+
+let lastFilePickerOpenTime = 0;
+let isFileLoading = false;
 
 function createNewDrawing(confirmPrompt = true) {
   if (confirmPrompt && typeof entities !== 'undefined' && entities.length > 0) {
@@ -15,59 +20,103 @@ function createNewDrawing(confirmPrompt = true) {
   panX = 0;
   panY = 0;
   viewRotation = 0;
-  if (typeof autoSaveToDB === 'function') autoSaveToDB();
+  if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
   if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
   if (typeof selectTool === 'function') selectTool('SELECT');
   if (typeof setInfo === 'function') setInfo("📄 Đã tạo bản vẽ mới sạch sẽ (Ctrl+N / Lệnh NEW). Nhập L, PL, REC hoặc APPLOAD để bắt đầu vẽ.");
   if (typeof logToCliHistory === 'function') logToCliHistory("Tạo bản vẽ mới: NEW (Ctrl+N)", "cmd");
 }
 
+/**
+ * Mở hộp thoại chọn tệp với cơ chế khóa chống mở lặp lại (Debounce 1000ms)
+ */
 function openFilePicker() {
+  const now = Date.now();
+  if (now - lastFilePickerOpenTime < 1000) {
+    return; // Chặn đúp click hoặc sự kiện nổi bọt gây mở 2 lần
+  }
+  lastFilePickerOpenTime = now;
+
+  const fileInput = document.getElementById('cad-file-input');
   if (fileInput) {
     fileInput.value = '';
     fileInput.click();
   }
 }
 
+/**
+ * Xử lý khi người dùng chọn xong file từ máy tính
+ */
 function handleFileInput(e) {
-  let file = e.target.files[0];
-  if (file) loadCadFile(file);
+  if (isFileLoading) return;
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+  isFileLoading = true;
+
+  try {
+    loadCadFile(file);
+  } finally {
+    setTimeout(() => {
+      if (e.target) e.target.value = '';
+      isFileLoading = false;
+    }, 400);
+  }
 }
 
+/**
+ * Đọc nội dung file và nạp thẳng lên Canvas hoặc nạp Plugin ngầm
+ */
 function loadCadFile(file) {
+  if (!file) return;
+  let name = file.name.toLowerCase();
+
+  // 1. Nếu là file Tool / AutoLISP / Plugin JavaScript -> Nạp thẳng chạy luôn mà không mở popup thừa
+  if (name.endsWith('.lsp') || name.endsWith('.js') || name.endsWith('.py')) {
+    if (typeof processFileList === 'function') {
+      processFileList([file], false);
+      return;
+    }
+  }
+
+  // 2. Nếu là file Bản vẽ (JSON / DXF) -> Đọc và đưa thẳng lên màn hình vẽ ngay lập tức
   let reader = new FileReader();
   reader.onload = function(evt) {
     let content = evt.target.result;
-    let name = file.name.toLowerCase();
 
     if (name.endsWith('.json') || content.trim().startsWith('[') || content.trim().startsWith('{')) {
       try {
         let parsed = JSON.parse(content);
+        let loadedEnts = [];
         if (Array.isArray(parsed)) {
-          saveState();
-          entities = parsed;
-          selectedIds.clear();
-          if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-          zoomAll();
-          setInfo(`📂 Đã nạp thành công bản vẽ từ file JSON: "${file.name}" (${entities.length} đối tượng).`);
-          return;
-        } else if (parsed.entities && Array.isArray(parsed.entities)) {
-          saveState();
-          entities = parsed.entities;
+          loadedEnts = parsed;
+        } else if (parsed && parsed.entities && Array.isArray(parsed.entities)) {
+          loadedEnts = parsed.entities;
           if (parsed.camera) {
             zoom = parsed.camera.zoom || zoom;
             panX = parsed.camera.panX || panX;
             panY = parsed.camera.panY || panY;
             if (Number.isFinite(parsed.camera.viewRotation)) viewRotation = parsed.camera.viewRotation;
           }
+        }
+
+        if (loadedEnts.length >= 0) {
+          saveState();
+          entities = loadedEnts;
           selectedIds.clear();
           if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-          zoomAll();
-          setInfo(`📂 Đã nạp thành công bản vẽ từ file JSON: "${file.name}" (${entities.length} đối tượng).`);
+          if (typeof zoomAll === 'function') zoomAll();
+          if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+          
+          let msg = `📂 Đã mở bản vẽ "${file.name}" (${entities.length} đối tượng) lên màn hình.`;
+          setInfo(msg, 'success');
+          if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
           return;
         }
       } catch (err) {
         alert("Lỗi đọc file JSON: " + err.message);
+        return;
       }
     }
 
@@ -80,22 +129,31 @@ function loadCadFile(file) {
             entities = dxfEnts;
             selectedIds.clear();
             if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-            zoomAll();
-            setInfo(`📂 Đã nhập thành công file DXF AutoCAD: "${file.name}" (${dxfEnts.length} đối tượng).`);
+            if (typeof zoomAll === 'function') zoomAll();
+            if (typeof autoSaveToDB === 'function') autoSaveToDB(true);
+            
+            let msg = `📂 Đã nạp thành công file DXF AutoCAD "${file.name}" (${dxfEnts.length} đối tượng).`;
+            setInfo(msg, 'success');
+            if (typeof logToCliHistory === 'function') logToCliHistory(msg, 'success');
             return;
           } else {
-            alert("Không tìm thấy đối tượng 2D (Line, Polyline, Circle, Text) nào trong file DXF.");
+            alert("Không tìm thấy đối tượng 2D nào trong file DXF.");
+            return;
           }
         }
       } catch (err) {
         alert("Lỗi đọc file DXF: " + err.message);
+        return;
       }
     }
+
+    alert("Định dạng file không được hỗ trợ. Hãy chọn file .json, .dxf, .lsp hoặc .js.");
   };
   reader.readAsText(file);
 }
 
-if (viewport) {
+// Thiết lập Drag & Drop vào Canvas
+if (typeof viewport !== 'undefined' && viewport) {
   viewport.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -103,7 +161,7 @@ if (viewport) {
 
   viewport.addEventListener('drop', (e) => {
     e.preventDefault();
-    let file = e.dataTransfer.files[0];
+    let file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) loadCadFile(file);
   });
 }

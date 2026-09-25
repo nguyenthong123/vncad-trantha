@@ -92,19 +92,51 @@ function extractCommandsFromCode(code) {
     cmds.add(match[1].toUpperCase());
   }
 
-  // 3. JS registerCommand('NAME', ...)
-  let regRegex = /registerCommand\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
+  // 3. JS registerCommand('NAME', ...) hoặc registerPluginCommand('NAME', ...)
+  let regRegex = /(?:registerCommand|registerPluginCommand)\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
   while ((match = regRegex.exec(code)) !== null) {
     cmds.add(match[1].toUpperCase());
   }
 
-  // 4. JS window.initNAMETool = ...
+  // 4. JS registerPluginTool('NAME', ...)
+  let regToolRegex = /registerPluginTool\(\s*['"]([A-Za-z0-9_]+)['"]/gi;
+  while ((match = regToolRegex.exec(code)) !== null) {
+    cmds.add(match[1].toUpperCase());
+  }
+
+  // 5. JS window.initNAMETool = ...
   let initRegex = /window(?:\.init|\[['"]init)([A-Za-z0-9_]+)Tool['"]?\]?\s*=/gi;
   while ((match = initRegex.exec(code)) !== null) {
     cmds.add(match[1].toUpperCase());
   }
 
   return Array.from(cmds);
+}
+
+/**
+ * Tự động trích xuất tên Tool từ tiêu đề comment hoặc lệnh trong mã nguồn
+ */
+function extractToolNameFromCode(code, fallback = '') {
+  if (!code) return fallback || '⚡ Plugin Tùy Chỉnh';
+
+  let lines = code.split('\n').slice(0, 15);
+  for (let l of lines) {
+    let clean = l.trim();
+    if (clean.startsWith(';;;') || clean.startsWith('//') || clean.startsWith('/*') || clean.startsWith('#')) {
+      let titleMatch = clean.match(/(?:PLUGIN|TOOL|TÊN|TITLE|BỘ CÔNG CỤ)\s*[:=–-]?\s*([^\r\n*]+)/i);
+      if (titleMatch && titleMatch[1].trim()) {
+        let name = titleMatch[1].trim().replace(/^[*#=;\s]+|[*#=;\s]+$/g, '');
+        if (name.length > 2 && name.length < 50) return name;
+      }
+    }
+  }
+
+  let cmds = extractCommandsFromCode(code);
+  if (cmds.length > 0) {
+    return `⚡ Tool ${cmds[0]}` + (cmds.length > 1 ? ` (+${cmds.length - 1} lệnh)` : '');
+  }
+
+  return fallback || `⚡ Script Tùy Chỉnh #${Date.now().toString().slice(-4)}`;
 }
 
 /**
@@ -461,7 +493,7 @@ function toggleToolStatus(idx) {
 /**
  * Xử lý danh sách nhiều File tải lên (Multi-file batch loader)
  */
-async function processFileList(files) {
+async function processFileList(files, showAlert = true) {
   if (!files || files.length === 0) return;
 
   let loadedCount = 0;
@@ -524,7 +556,9 @@ async function processFileList(files) {
   if (typeof logToCliHistory === 'function') {
     logToCliHistory(msg, 'success');
   }
-  alert(`Đã nạp thành công ${loadedCount} Tool!\nCác lệnh CLI mới sẵn sàng: ${allNewCmds.join(', ')}\nBạn có thể gõ trực tiếp trên thanh Command.`);
+  if (showAlert) {
+    alert(`Đã nạp thành công ${loadedCount} Tool!\nCác lệnh CLI mới sẵn sàng: ${allNewCmds.join(', ')}\nBạn có thể gõ trực tiếp trên thanh Command.`);
+  }
 }
 
 function readFileAsText(file) {
@@ -545,50 +579,69 @@ function handleToolFileUpload(e) {
 }
 
 /**
- * Đăng ký script nhập tay trực tiếp từ form
+ * Đăng ký script nhập tay trực tiếp từ form (Tự động nhận diện lệnh & tên Tool)
  */
 function registerCustomTool() {
-  let nameEl = document.getElementById('new-tool-name');
-  let cmdEl = document.getElementById('new-tool-cmd');
   let codeEl = document.getElementById('new-tool-code');
-  if (!nameEl || !cmdEl || !codeEl) return;
+  if (!codeEl) return;
 
-  let name = nameEl.value.trim();
-  let cmd = cmdEl.value.trim().toUpperCase();
   let code = codeEl.value.trim();
-
-  if (!name || !cmd) {
-    alert("Vui lòng nhập đầy đủ Tên Tool và Lệnh gọi (CLI).");
+  if (!code) {
+    alert("Vui lòng dán nội dung mã AutoLISP (.lsp) hoặc JavaScript (.js) vào khung.");
     return;
   }
 
-  let isLsp = code.includes('(defun') || code.startsWith(';');
+  let isLsp = code.includes('(defun') || code.startsWith(';') || code.includes(';;<JS_ENGINE>');
   let cmds = extractCommandsFromCode(code);
-  if (!cmds.includes(cmd)) cmds.unshift(cmd);
+  let name = extractToolNameFromCode(code);
+
+  if (cmds.length === 0) {
+    // Nếu không tìm thấy định nghĩa c:CMD cụ thể, tạo lệnh gọi mặc định
+    let defaultCmd = 'TOOL_' + Date.now().toString().slice(-4);
+    cmds = [defaultCmd];
+    window.registerCommand(defaultCmd, function() {
+      try {
+        (new Function(code))();
+      } catch (e) {
+        console.error("Lỗi thực thi script:", e);
+      }
+    }, `Thực thi script [${name}]`);
+  }
 
   let newTool = {
     id: 'tool_custom_' + Date.now(),
-    name: '⚡ ' + name,
-    fileName: 'custom_script.js',
-    cmd: cmd,
+    name: name,
+    fileName: isLsp ? (cmds[0] ? cmds[0].toLowerCase() + '.lsp' : 'custom_tool.lsp') : (cmds[0] ? cmds[0].toLowerCase() + '.js' : 'custom_tool.js'),
+    cmd: cmds[0] || 'PLUGIN',
     commands: cmds,
-    desc: 'Script tùy chỉnh người dùng thêm trực tiếp',
-    type: isLsp ? 'AutoLISP' : 'Script Người Dùng',
+    desc: `Tự động nhận diện (${cmds.length} lệnh: ${cmds.join(', ')})`,
+    type: isLsp ? 'AutoLISP Plugin' : 'JavaScript Plugin',
     enabled: true,
     code: code,
     loadedAt: Date.now()
   };
 
   executeToolCode(newTool);
-  customTools.push(newTool);
+
+  // Cập nhật nếu đã có tool cùng tên/lệnh
+  let existingIdx = customTools.findIndex(t => t.name === newTool.name || (t.cmd && t.cmd === newTool.cmd));
+  if (existingIdx >= 0) {
+    customTools[existingIdx] = newTool;
+  } else {
+    customTools.push(newTool);
+  }
+
   saveCustomToolsToStorage();
 
-  nameEl.value = '';
-  cmdEl.value = '';
   codeEl.value = '';
   renderApploadTable();
-  setInfo(`⚡ Đã đăng ký thành công Tool [${name}] (Lệnh: ${cmds.join(', ')}).`);
-  alert(`Đã đăng ký thành công Tool [${name}]!\nGõ "${cmd}" trong CLI để chạy.`);
+
+  let successMsg = `⚡ Đã nạp thành công [${name}] (${cmds.length} lệnh sẵn sàng: ${cmds.join(', ')}).`;
+  setInfo(successMsg, 'success');
+  if (typeof logToCliHistory === 'function') {
+    logToCliHistory(successMsg, 'success');
+  }
+  alert(`Đã nạp thành công Tool!\nCác lệnh CLI đã tự động nhận diện: ${cmds.join(', ')}\nBạn có thể gõ ngay trên thanh COMMAND hoặc click vào bảng để chạy.`);
 }
 
 /**
