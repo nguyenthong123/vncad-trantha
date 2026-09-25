@@ -6581,18 +6581,10 @@ window.addEventListener('keydown', (e) => {
       return;
     }
 
-    // 5. Nếu đang ở một công cụ / plugin cụ thể, chạy handler của lệnh đó
+    // 5. Nếu đang ở một công cụ / plugin nhưng không có onEnter riêng, không tự động re-init lại lệnh
     if (currentTool && currentTool !== 'SELECT' && currentTool !== 'PAN') {
-      if (typeof dynamicCommands !== 'undefined' && dynamicCommands[currentTool]) {
-        if (e) e.preventDefault();
-        dynamicCommands[currentTool].handler();
-        return;
-      }
-      if (typeof window['c_' + currentTool] === 'function') {
-        if (e) e.preventDefault();
-        window['c_' + currentTool]();
-        return;
-      }
+      // Đang trong chế độ tool, giữ nguyên trạng thái
+      return;
     }
 
     // 5. Lặp lại lệnh gần nhất (Repeat Last Command)
