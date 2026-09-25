@@ -21,7 +21,8 @@ window.addEventListener('keydown', (e) => {
       });
     }
 
-    // 2. Đóng hộp thoại Appload nếu đang mở
+    // 2. Đóng hộp thoại Appload & Thông báo nếu đang mở
+    if (typeof closeCadDialog === 'function') closeCadDialog();
     if (typeof closeApploadModal === 'function') closeApploadModal();
 
     // 3. Hủy trạng thái vẽ & thao tác đang dở dang

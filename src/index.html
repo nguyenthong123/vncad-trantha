@@ -223,6 +223,22 @@
   </div>
 </div>
 
+<!-- CENTERED MODERN NOTIFICATION & DIALOG SYSTEM -->
+<div id="cad-dialog-backdrop" onclick="if(event.target === this) closeCadDialog();">
+  <div class="cad-dialog-card">
+    <div class="cad-dialog-header">
+      <div class="cad-dialog-title" id="cad-dialog-title">✨ Thông Báo</div>
+      <button class="modal-close" onclick="closeCadDialog()">✕</button>
+    </div>
+    <div class="cad-dialog-body" id="cad-dialog-body">
+      <!-- Dynamic notification content -->
+    </div>
+    <div class="cad-dialog-footer" id="cad-dialog-footer">
+      <button class="cad-dialog-btn-primary" id="cad-dialog-ok-btn" onclick="closeCadDialog()">Đồng Ý (OK)</button>
+    </div>
+  </div>
+</div>
+
 <!-- SCRIPTS (Loaded sequentially or bundled) -->
 <script src="js/core/db.js"></script>
 <script src="js/core/state.js"></script>

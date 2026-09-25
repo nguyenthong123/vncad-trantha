@@ -154,3 +154,141 @@
   color: #94a3b8;
 }
 
+/* ===============================================================================
+   CENTERED MODERN NOTIFICATION & DIALOG SYSTEM (THAY THẾ ALERT MẶC ĐỊNH)
+   =============================================================================== */
+#cad-dialog-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.75);
+  z-index: 999999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  padding: 16px;
+  animation: cadFadeIn 0.2s ease-out forwards;
+}
+
+.cad-dialog-card {
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 14px;
+  width: 480px;
+  max-width: 94vw;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cadScalePop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cadFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cadScalePop {
+  0% { transform: scale(0.85) translateY(12px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.cad-dialog-header {
+  background: #1e293b;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #334155;
+}
+
+.cad-dialog-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cad-dialog-body {
+  padding: 20px;
+  color: #e2e8f0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.cad-dialog-cmds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 6px 0;
+  padding: 10px;
+  background: #020617;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+}
+
+.cad-dialog-cmd-chip {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cad-dialog-cmd-chip:hover {
+  background: #38bdf8;
+  color: #0f172a;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  transform: translateY(-2px);
+}
+
+.cad-dialog-footer {
+  background: #1e293b;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #334155;
+}
+
+.cad-dialog-btn-primary {
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 13px;
+  border: none;
+  padding: 8px 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cad-dialog-btn-primary:hover {
+  background: #7dd3fc;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.cad-dialog-btn-cancel {
+  background: #334155;
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 13px;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cad-dialog-btn-cancel:hover {
+  background: #475569;
+}
+

@@ -880,6 +880,144 @@ canvas {
   color: #94a3b8;
 }
 
+/* ===============================================================================
+   CENTERED MODERN NOTIFICATION & DIALOG SYSTEM (THAY THẾ ALERT MẶC ĐỊNH)
+   =============================================================================== */
+#cad-dialog-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.75);
+  z-index: 999999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  padding: 16px;
+  animation: cadFadeIn 0.2s ease-out forwards;
+}
+
+.cad-dialog-card {
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 14px;
+  width: 480px;
+  max-width: 94vw;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cadScalePop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cadFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cadScalePop {
+  0% { transform: scale(0.85) translateY(12px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.cad-dialog-header {
+  background: #1e293b;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #334155;
+}
+
+.cad-dialog-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cad-dialog-body {
+  padding: 20px;
+  color: #e2e8f0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.cad-dialog-cmds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 6px 0;
+  padding: 10px;
+  background: #020617;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+}
+
+.cad-dialog-cmd-chip {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cad-dialog-cmd-chip:hover {
+  background: #38bdf8;
+  color: #0f172a;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  transform: translateY(-2px);
+}
+
+.cad-dialog-footer {
+  background: #1e293b;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #334155;
+}
+
+.cad-dialog-btn-primary {
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 13px;
+  border: none;
+  padding: 8px 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cad-dialog-btn-primary:hover {
+  background: #7dd3fc;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.cad-dialog-btn-cancel {
+  background: #334155;
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 13px;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cad-dialog-btn-cancel:hover {
+  background: #475569;
+}
+
 
 </style>
 </head>
@@ -1090,6 +1228,22 @@ canvas {
       <span id="cli-label">COMMAND:</span>
       <input id="cli-input" type="text" placeholder="Nhập lệnh (L, PL, REC, C, ARC, PR, APPLOAD, DXF, DEL...)" autofocus />
       <span id="cli-msg">OSNAP: ON | GRID: ON | ORTHO: OFF [F8]</span>
+    </div>
+  </div>
+</div>
+
+<!-- CENTERED MODERN NOTIFICATION & DIALOG SYSTEM -->
+<div id="cad-dialog-backdrop" onclick="if(event.target === this) closeCadDialog();">
+  <div class="cad-dialog-card">
+    <div class="cad-dialog-header">
+      <div class="cad-dialog-title" id="cad-dialog-title">✨ Thông Báo</div>
+      <button class="modal-close" onclick="closeCadDialog()">✕</button>
+    </div>
+    <div class="cad-dialog-body" id="cad-dialog-body">
+      <!-- Dynamic notification content -->
+    </div>
+    <div class="cad-dialog-footer" id="cad-dialog-footer">
+      <button class="cad-dialog-btn-primary" id="cad-dialog-ok-btn" onclick="closeCadDialog()">Đồng Ý (OK)</button>
     </div>
   </div>
 </div>
@@ -4998,8 +5152,13 @@ async function processFileList(files, showAlert = true) {
   if (typeof logToCliHistory === 'function') {
     logToCliHistory(msg, 'success');
   }
-  if (showAlert) {
-    alert(`Đã nạp thành công ${loadedCount} Tool!\nCác lệnh CLI mới sẵn sàng: ${allNewCmds.join(', ')}\nBạn có thể gõ trực tiếp trên thanh Command.`);
+  if (showAlert && loadedCount > 0) {
+    showCadAlert({
+      title: "Đã Nạp Thành Công Tool Mở Rộng!",
+      message: `Hệ thống đã nhận diện và nạp thành công <b>${loadedCount}</b> Tool mới.<br>Các lệnh CLI đã sẵn sàng sử dụng:`,
+      cmds: allNewCmds,
+      type: "success"
+    });
   }
 }
 
@@ -5083,7 +5242,12 @@ function registerCustomTool() {
   if (typeof logToCliHistory === 'function') {
     logToCliHistory(successMsg, 'success');
   }
-  alert(`Đã nạp thành công Tool!\nCác lệnh CLI đã tự động nhận diện: ${cmds.join(', ')}\nBạn có thể gõ ngay trên thanh COMMAND hoặc click vào bảng để chạy.`);
+  showCadAlert({
+    title: `Đã Nạp Thành Công [${name}]!`,
+    message: `Đã tự động nhận diện và đăng ký <b>${cmds.length}</b> lệnh CLI mới vào hệ thống:`,
+    cmds: cmds,
+    type: "success"
+  });
 }
 
 /**
@@ -5106,7 +5270,11 @@ function removeCustomTool(idx) {
  */
 function clearAllCustomTools() {
   if (customTools.length === 0) {
-    alert("Hiện không có tool ngoài nào để gỡ.");
+    showCadAlert({
+      title: "Thông Báo",
+      message: "Hiện không có tool ngoài nào để gỡ.",
+      type: "info"
+    });
     return;
   }
   if (confirm(`Bạn có chắc chắn muốn gỡ bỏ TẤT CẢ ${customTools.length} tool ngoài đã nạp không?`)) {
@@ -5115,7 +5283,11 @@ function clearAllCustomTools() {
     saveCustomToolsToStorage();
     renderApploadTable();
     setInfo("🗑️ Đã xóa sạch toàn bộ các tool mở rộng.");
-    alert("Đã gỡ bỏ toàn bộ tool ngoài.");
+    showCadAlert({
+      title: "Đã Gỡ Bỏ",
+      message: "Đã xóa sạch toàn bộ các tool mở rộng khỏi hệ thống.",
+      type: "info"
+    });
   }
 }
 
@@ -5170,6 +5342,100 @@ if (typeof document !== 'undefined') {
     initDragAndDropAppload();
   }
 }
+
+// ===============================================================================
+//     CENTERED MODERN NOTIFICATION & ALERT SYSTEM (THAY THẾ ALERT MẶC ĐỊNH)
+// ===============================================================================
+window.showCadAlert = function(options) {
+  let title = "✨ Thông Báo";
+  let message = "";
+  let cmds = [];
+  let type = "info";
+  let onConfirm = null;
+
+  if (typeof options === 'string') {
+    message = options;
+    if (message.includes('Đã nạp thành công') || message.includes('lệnh') || message.includes('CLI')) {
+      title = "🧩 Nạp Tool Thành Công!";
+      type = "success";
+      // Trích xuất tự động danh sách lệnh nếu chuỗi chứa "lệnh ...:"
+      let match = message.match(/(?:lệnh[^:]*:|nhận diện:)\s*([A-Za-z0-9_,\s]+)/i);
+      if (match && match[1]) {
+        cmds = match[1].split(/[, \n]+/).filter(c => c && c.trim().length > 0);
+      }
+    } else if (message.includes('Lỗi') || message.includes('lỗi') || message.includes('không')) {
+      title = "⚠️ Chú Ý";
+      type = "warning";
+    }
+  } else if (typeof options === 'object' && options !== null) {
+    title = options.title || title;
+    message = options.message || "";
+    cmds = options.cmds || [];
+    type = options.type || type;
+    onConfirm = options.onConfirm || null;
+  }
+
+  const backdrop = document.getElementById('cad-dialog-backdrop');
+  const titleEl = document.getElementById('cad-dialog-title');
+  const bodyEl = document.getElementById('cad-dialog-body');
+  const okBtn = document.getElementById('cad-dialog-ok-btn');
+
+  if (!backdrop || !titleEl || !bodyEl) {
+    console.log(`[${title}] ${message}`);
+    return;
+  }
+
+  let icon = "✨";
+  if (type === 'success') icon = "🚀";
+  else if (type === 'warning') icon = "⚠️";
+  else if (type === 'error') icon = "❌";
+  else if (type === 'save') icon = "💾";
+
+  titleEl.innerHTML = `${icon} ${title}`;
+  if (type === 'error') titleEl.style.color = '#ef4444';
+  else if (type === 'warning') titleEl.style.color = '#facc15';
+  else if (type === 'success') titleEl.style.color = '#38bdf8';
+  else titleEl.style.color = '#38bdf8';
+
+  let formattedMsg = message.replace(/\n/g, '<br>');
+  let html = `<div style="font-size:13.5px; line-height:1.6;">${formattedMsg}</div>`;
+
+  if (Array.isArray(cmds) && cmds.length > 0) {
+    html += `<div style="margin-top:14px; font-weight:700; color:#94a3b8; font-size:12px;">👉 Nhấp vào lệnh để chạy ngay (hoặc gõ vào Command):</div>`;
+    html += `<div class="cad-dialog-cmds">`;
+    for (let c of cmds) {
+      if (!c) continue;
+      html += `<span class="cad-dialog-cmd-chip" onclick="closeCadDialog(); runCommand('${c}');" title="Chạy ngay lệnh [${c}]">${c}</span>`;
+    }
+    html += `</div>`;
+  }
+
+  bodyEl.innerHTML = html;
+
+  if (okBtn) {
+    okBtn.onclick = function() {
+      closeCadDialog();
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+    setTimeout(() => {
+      try { okBtn.focus(); } catch (e) {}
+    }, 60);
+  }
+
+  backdrop.style.display = 'flex';
+};
+
+window.closeCadDialog = function() {
+  const backdrop = document.getElementById('cad-dialog-backdrop');
+  if (backdrop) {
+    backdrop.style.display = 'none';
+  }
+};
+
+// Ghi đè alert mặc định của trình duyệt để hiển thị popup trung tâm giao diện chuẩn CAD
+window.alert = function(msg) {
+  window.showCadAlert(msg);
+};
 
 // === js/ui/cli.js ===
 // AUTOCAD COMMAND LINE INTERFACE (CLI) & SMART INTELLISENSE ASSISTANT
@@ -5989,7 +6255,8 @@ window.addEventListener('keydown', (e) => {
       });
     }
 
-    // 2. Đóng hộp thoại Appload nếu đang mở
+    // 2. Đóng hộp thoại Appload & Thông báo nếu đang mở
+    if (typeof closeCadDialog === 'function') closeCadDialog();
     if (typeof closeApploadModal === 'function') closeApploadModal();
 
     // 3. Hủy trạng thái vẽ & thao tác đang dở dang
