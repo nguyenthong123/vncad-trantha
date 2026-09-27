@@ -36,6 +36,10 @@ def read_plugin_file(rel_path):
 
 def build_plugins():
     if not os.path.exists(PLUGINS_SRC_DIR):
+        tt600_js_path = os.path.join(PLUGINS_DIR, "trantha600.js")
+        if os.path.exists(tt600_js_path):
+            with open(tt600_js_path, "r", encoding="utf-8") as f:
+                return f.read()
         return ""
     print("🧩 Building Plugins from modular plugins_src/...")
     os.makedirs(PLUGINS_DIR, exist_ok=True)

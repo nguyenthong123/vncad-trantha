@@ -169,24 +169,6 @@ function handlePointerUp(clientX, clientY, shiftKey = false, originalEvent = nul
     if (handled === true) return;
   }
 
-  // Xử lý kéo thả trực tiếp (Drag & Drop Move/Copy) khi thả tay/chuột
-  if (isDragMoving && isDrawing && startPoint && isTransformTool) {
-    const rect = viewport.getBoundingClientRect();
-    const upScreen = { x: clientX - rect.left, y: clientY - rect.top };
-    const dragDist = Math.hypot(upScreen.x - dragStartScreen.x, upScreen.y - dragStartScreen.y);
-    if (dragDist >= 6) {
-      let rawUp = screenToWorld(upScreen.x, upScreen.y);
-      let snap = typeof findSnapPoint === 'function' ? findSnapPoint(rawUp) : null;
-      let finalTarget = snap || rawUp;
-      const upWorld = applyOrthoPoint(startPoint, finalTarget);
-      finishDrawingWithPoint(upWorld);
-      isDragMoving = false;
-      return;
-    } else {
-      isDragMoving = false;
-    }
-  }
-
   if (isBoxSelecting) {
     const rect = viewport.getBoundingClientRect();
     const upScreen = { x: clientX - rect.left, y: clientY - rect.top };
@@ -216,7 +198,7 @@ function handlePointerUp(clientX, clientY, shiftKey = false, originalEvent = nul
         pluginTool.onSelectionChange(selectedIds, isCrossing);
       } else if (selectedIds.size > 0) {
         if (isTransformTool) {
-          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER để chốt nhóm điểm (hoặc nhấp giữ kéo thả sang vị trí mới)...`);
+          setInfo(`👉 [${currentTool}] Đã chọn ${selectedIds.size} đối tượng. Bấm ENTER / SPACE khi chọn xong, sau đó nhấp Điểm Gốc (Base Point)...`);
         } else if (currentTool === 'ERASE') {
           setInfo(`👉 [ERASE] Đã chọn ${selectedIds.size} đối tượng. Nhấn ENTER hoặc DEL để xóa.`);
         } else {
@@ -229,7 +211,11 @@ function handlePointerUp(clientX, clientY, shiftKey = false, originalEvent = nul
           }
         }
       } else {
-        setInfo("💡 Không có đối tượng nào trong vùng quét.");
+        if (isTransformTool) {
+          setInfo(`💡 [${currentTool}] Không có đối tượng nào trong vùng quét. Hãy quét lại hoặc nhấp trực tiếp vào đối tượng.`);
+        } else {
+          setInfo("💡 Không có đối tượng nào trong vùng quét.");
+        }
       }
     } else {
       // Click / chạm nhẹ vào khoảng trống mà không kéo
@@ -242,7 +228,7 @@ function handlePointerUp(clientX, clientY, shiftKey = false, originalEvent = nul
           setInfo("Đã bỏ chọn.");
         }
       } else if (isTransformTool && selectedIds.size === 0) {
-        setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét vùng chọn đối tượng trước khi kéo thả.`);
+        setInfo(`💡 [Lệnh ${currentTool}] Chưa chọn đối tượng. Hãy quét hoặc nhấp chọn đối tượng trước.`);
       }
     }
 
@@ -540,9 +526,9 @@ function handleCanvasClick() {
       if (found) {
         selectedIds.add(found.id);
         if (typeof renderPropertiesPanel === 'function') renderPropertiesPanel();
-        setInfo(`✅ Đã chọn đối tượng #${found.id}. Hãy nhấp Điểm Gốc (Base Point)...`);
+        setInfo(`👉 [${currentTool}] Đã chọn đối tượng #${found.id}. Bấm ENTER / SPACE để chốt chọn hoặc nhấp Điểm Gốc (Base Point)...`);
       } else {
-        setInfo("💡 Hãy nhấp chọn đối tượng trước khi thực hiện lệnh.");
+        setInfo(`💡 [${currentTool}] Hãy nhấp hoặc quét chọn đối tượng trước khi thực hiện lệnh.`);
       }
       return;
     }
@@ -550,16 +536,29 @@ function handleCanvasClick() {
     if (!isDrawing) {
       isDrawing = true;
       startPoint = pt;
-      isDragMoving = true;
-      dragStartScreen = { ...(typeof mouseDownScreen !== 'undefined' ? mouseDownScreen : mouseScreen) };
+      if (typeof activeCommandContext !== 'undefined') {
+        activeCommandContext.phase = 'PICK_TARGET_POINT';
+      }
       if (dynInput) {
         dynInput.value = '';
         dynInput.focus();
       }
-      if (currentTool === 'ROTATE') setInfo("🔄 [ROTATE] Đã chọn Tâm Xoay. Nhấp Điểm Hướng Xoay (hoặc gõ độ xoay 45, 90 + Enter)...");
-      else if (currentTool === 'SCALE') setInfo("📐 [SCALE] Đã chọn Tâm Tỉ Lệ. Nhấp Điểm Tỉ Lệ (hoặc gõ hệ số 1.5, 2.0 + Enter)...");
-      else if (currentTool === 'MIRROR') setInfo("🪞 [MIRROR] Đã chọn Điểm 1 của trục đối xứng. Nhấp Điểm 2...");
-      else setInfo(`✥ [${currentTool}] Đang kéo di chuyển. Thả chuột/tay tại vị trí mới để hoàn tất (hoặc gõ khoảng cách + Enter)...`);
+      if (currentTool === 'ROTATE') {
+        setInfo(`🔄 [ROTATE] Đã chọn Tâm Xoay (${pt.x.toFixed(0)}, ${pt.y.toFixed(0)}). Nhấp Điểm Hướng Xoay (hoặc gõ độ xoay + Enter)...`);
+        if (typeof logToCliHistory === 'function') logToCliHistory(`Specify rotation angle:`, 'prompt');
+      } else if (currentTool === 'SCALE') {
+        setInfo(`📐 [SCALE] Đã chọn Tâm Tỉ Lệ (${pt.x.toFixed(0)}, ${pt.y.toFixed(0)}). Nhấp Điểm Tỉ Lệ (hoặc gõ hệ số scale + Enter)...`);
+        if (typeof logToCliHistory === 'function') logToCliHistory(`Specify scale factor:`, 'prompt');
+      } else if (currentTool === 'MIRROR') {
+        setInfo(`🪞 [MIRROR] Đã chọn Điểm 1 trục đối xứng (${pt.x.toFixed(0)}, ${pt.y.toFixed(0)}). Nhấp Điểm 2 kết thúc...`);
+        if (typeof logToCliHistory === 'function') logToCliHistory(`Specify second point of mirror line:`, 'prompt');
+      } else if (currentTool === 'COPY') {
+        setInfo(`📋 [COPY] Đã chọn Điểm Gốc (${pt.x.toFixed(0)}, ${pt.y.toFixed(0)}). Nhấp Vị Trí Mới để dán bản sao (hoặc nhập khoảng cách + Enter)...`);
+        if (typeof logToCliHistory === 'function') logToCliHistory(`Specify second point:`, 'prompt');
+      } else {
+        setInfo(`✥ [MOVE] Đã chọn Điểm Gốc (${pt.x.toFixed(0)}, ${pt.y.toFixed(0)}). Nhấp Vị Trí Mới (hoặc nhập khoảng cách + Enter)...`);
+        if (typeof logToCliHistory === 'function') logToCliHistory(`Specify second point:`, 'prompt');
+      }
     } else {
       finishDrawingWithPoint(pt);
     }

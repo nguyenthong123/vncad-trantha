@@ -301,11 +301,30 @@ function runCommand(rawCmd) {
     window.lastExecutedCommand = lastExecutedCommand;
   }
 
-  if (typeof logCommandTransaction === 'function') {
-    logCommandTransaction(cmd, 'STARTED', { args });
+  // 1. NHẬP SỐ KHOẢNG CÁCH HOẶC TỌA ĐỘ TRỰC TIẾP TRÊN CLI KHI ĐANG VẼ/DI CHUYỂN
+  if (typeof isDrawing !== 'undefined' && isDrawing && typeof startPoint !== 'undefined' && startPoint) {
+    let numVal = parseFloat(rawCmd);
+    if (!isNaN(numVal) && String(numVal) === rawCmd.trim()) {
+      if (typeof dynInput !== 'undefined' && dynInput) dynInput.value = rawCmd.trim();
+      if (typeof handleDynInputSubmit === 'function') {
+        handleDynInputSubmit();
+        return;
+      }
+    }
+    if (/^@?-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(rawCmd.trim())) {
+      let isRelative = rawCmd.trim().startsWith('@');
+      let coords = rawCmd.trim().replace('@', '').split(',').map(s => parseFloat(s.trim()));
+      if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+        let targetPt = isRelative ? { x: startPoint.x + coords[0], y: startPoint.y + coords[1] } : { x: coords[0], y: coords[1] };
+        if (typeof finishDrawingWithPoint === 'function') {
+          finishDrawingWithPoint(targetPt);
+          return;
+        }
+      }
+    }
   }
 
-  // 1. ƯU TIÊN SỐ 1: Kiểm tra Plugin / Lệnh Động / Custom Tools đã nạp qua APPLOAD
+  // 2. ƯU TIÊN SỐ 1: Kiểm tra Plugin / Lệnh Động / Custom Tools đã nạp qua APPLOAD
   if (typeof dynamicCommands !== 'undefined' && dynamicCommands[cmd]) {
     recordCommandUsage(cmd);
     try {
@@ -455,7 +474,7 @@ function runCommand(rawCmd) {
     return;
   }
 
-  // Modify commands (Có cảnh báo thông minh nếu chưa chọn đối tượng)
+  // Modify commands (MOVE, COPY, ROTATE, SCALE, MIRROR)
   if (['M', 'MOVE', 'CO', 'COPY', 'CP', 'RO', 'ROTATE', 'SC', 'SCALE', 'MI', 'MIRROR'].includes(cmd)) {
     let baseCmd = cmd.startsWith('M') && cmd !== 'MI' && cmd !== 'MIRROR' ? 'MOVE' :
                   cmd.startsWith('C') ? 'COPY' :
@@ -463,11 +482,6 @@ function runCommand(rawCmd) {
                   cmd.startsWith('SC') ? 'SCALE' : 'MIRROR';
     recordCommandUsage(baseCmd);
     selectTool(baseCmd);
-    if (selectedIds.size === 0) {
-      setInfo(`💡 [Lệnh ${baseCmd}] Chưa chọn đối tượng. Hãy nhấp hoặc quét chọn đối tượng trước khi chọn Điểm Gốc.`);
-    } else {
-      setInfo(`✅ [Lệnh ${baseCmd}] Đang chọn ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
-    }
     return;
   }
 

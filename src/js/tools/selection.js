@@ -65,12 +65,15 @@ function selectTool(tool) {
     setInfo("👆 Chế độ Chọn (SELECT): Nhấp hoặc quét khung để chọn đối tượng.");
   } else if (TRANSFORM_TOOLS.includes(tool)) {
     if (activeCommandContext.phase === 'PICK_BASE_POINT') {
-      setInfo(`👉 [${tool}] Bước 2/2: Đang chọn ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+      setInfo(`👉 [${tool}] Bước 2/2: Đã chọn ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+      if (typeof logToCliHistory === 'function') logToCliHistory(`Command: ${tool} - Specify base point:`, 'prompt');
     } else {
-      setInfo(`👉 [${tool}] Bước 1/2: Quét hoặc nhấp chọn các đối tượng. Bấm ENTER / SPACE khi chọn xong.`);
+      setInfo(`👉 [${tool}] Bước 1/2: Quét hoặc nhấp chọn các đối tượng cần thao tác. Nhấn ENTER / SPACE khi chọn xong.`);
+      if (typeof logToCliHistory === 'function') logToCliHistory(`Command: ${tool} - Select objects:`, 'prompt');
     }
   } else if (tool === 'ERASE') {
     setInfo("❌ [ERASE] Quét hoặc nhấp chọn các đối tượng cần xóa. Bấm ENTER / SPACE để xóa.");
+    if (typeof logToCliHistory === 'function') logToCliHistory(`Command: ERASE - Select objects:`, 'prompt');
   } else {
     setInfo(`🛠️ Đang kích hoạt lệnh [${tool}]. Nhấp chuột trên bản vẽ để bắt đầu.`);
   }

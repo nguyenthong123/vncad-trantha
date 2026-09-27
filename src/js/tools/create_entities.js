@@ -51,7 +51,11 @@ function finishDrawingWithPoint(targetPt) {
   } else if (currentTool === 'MOVE') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
     entities = entities.map(e => selectedIds.has(e.id) ? translateEntity(e, dx, dy) : e);
-    setInfo(`✥ Đã dời ${selectedIds.size} đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`);
+    setInfo(`✅ [MOVE] Đã di chuyển ${selectedIds.size} đối tượng sang vị trí mới (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm).`, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(`Đã di chuyển ${selectedIds.size} đối tượng (ΔX: ${dx.toFixed(0)}, ΔY: ${dy.toFixed(0)} mm)`, 'success');
+    }
+    if (typeof activeCommandContext !== 'undefined') activeCommandContext = { cmd: null, phase: 'IDLE' };
     selectTool('SELECT');
   } else if (currentTool === 'COPY') {
     let dx = targetPt.x - startPoint.x, dy = targetPt.y - startPoint.y;
@@ -62,21 +66,37 @@ function finishDrawingWithPoint(targetPt) {
       }
     });
     entities.push(...newObjs);
-    setInfo(`📋 Đã sao chép ${newObjs.length} đối tượng.`);
+    setInfo(`✅ [COPY] Đã sao chép ${newObjs.length} đối tượng sang vị trí mới.`, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(`Đã sao chép ${newObjs.length} đối tượng`, 'success');
+    }
+    if (typeof activeCommandContext !== 'undefined') activeCommandContext = { cmd: null, phase: 'IDLE' };
     selectTool('SELECT');
   } else if (currentTool === 'ROTATE') {
     let angRad = Math.atan2(targetPt.y - startPoint.y, targetPt.x - startPoint.x);
     entities = entities.map(e => selectedIds.has(e.id) ? rotateEntity(e, startPoint, angRad) : e);
-    setInfo(`🔄 Đã xoay đối tượng ${(angRad * 180 / Math.PI).toFixed(1)}° quanh điểm gốc.`);
+    setInfo(`✅ [ROTATE] Đã xoay đối tượng ${(angRad * 180 / Math.PI).toFixed(1)}° quanh điểm gốc.`, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(`Đã xoay đối tượng ${(angRad * 180 / Math.PI).toFixed(1)}°`, 'success');
+    }
+    if (typeof activeCommandContext !== 'undefined') activeCommandContext = { cmd: null, phase: 'IDLE' };
     selectTool('SELECT');
   } else if (currentTool === 'SCALE') {
     let factor = targetPt.customScaleFactor !== undefined ? targetPt.customScaleFactor : (Math.hypot(targetPt.x - startPoint.x, targetPt.y - startPoint.y) / 100 || 1);
     entities = entities.map(e => selectedIds.has(e.id) ? scaleEntity(e, startPoint, factor) : e);
-    setInfo(`📐 Đã Scale đối tượng tỉ lệ ${factor.toFixed(2)}x.`);
+    setInfo(`✅ [SCALE] Đã Scale đối tượng tỉ lệ ${factor.toFixed(2)}x.`, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(`Đã Scale đối tượng tỉ lệ ${factor.toFixed(2)}x`, 'success');
+    }
+    if (typeof activeCommandContext !== 'undefined') activeCommandContext = { cmd: null, phase: 'IDLE' };
     selectTool('SELECT');
   } else if (currentTool === 'MIRROR') {
     entities = entities.map(e => selectedIds.has(e.id) ? mirrorEntity(e, startPoint, targetPt) : e);
-    setInfo(`🪞 Đã lấy đối xứng gương MIRROR.`);
+    setInfo(`✅ [MIRROR] Đã lấy đối xứng gương MIRROR.`, 'success');
+    if (typeof logToCliHistory === 'function') {
+      logToCliHistory(`Đã lấy đối xứng gương MIRROR`, 'success');
+    }
+    if (typeof activeCommandContext !== 'undefined') activeCommandContext = { cmd: null, phase: 'IDLE' };
     selectTool('SELECT');
   }
 

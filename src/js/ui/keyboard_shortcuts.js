@@ -66,6 +66,7 @@ function handleGlobalConfirm(e, isFromCli = false) {
     if (TRANSFORM_TOOLS.includes(currentTool)) {
       activeCommandContext.phase = 'PICK_BASE_POINT';
       setInfo(`👉 [${currentTool}] Bước 2/2: Đã chốt ${selectedIds.size} đối tượng. Hãy nhấp Điểm Gốc (Base Point)...`);
+      if (typeof logToCliHistory === 'function') logToCliHistory(`Specify base point:`, 'prompt');
       return true;
     }
   }
